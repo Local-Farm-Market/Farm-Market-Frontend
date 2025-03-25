@@ -42,6 +42,10 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 
+type Order = 
+  | (typeof buyerOrders)[number]
+  | (typeof sellerOrders)[number];
+
 // Mock order data for buyers
 const buyerOrders = [
   {
@@ -244,9 +248,9 @@ const sellerOrders = [
 
 export default function OrdersPage() {
   const { role, setRole } = useUserRole();
-  const [orders, setOrders] = useState(
-    role === "seller" ? sellerOrders : buyerOrders
-  );
+  const [orders, setOrders] = useState<Order[]>(
+  role === "seller" ? sellerOrders : buyerOrders
+);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
@@ -471,13 +475,15 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="relative w-8 h-8 rounded-full overflow-hidden">
                         <Image
-                          src={order.seller.avatar || "/placeholder.svg"}
-                          alt={order.seller.name}
+                          src={"seller" in order ? order.seller.avatar : "/placeholder.svg"}
+                          alt={"seller" in order ? order.seller.name : "N/A"}
                           fill
                           className="object-cover"
                         />
                       </div>
-                      <span>Seller: {order.seller.name}</span>
+                      <span>
+                        Seller: {"seller" in order ? order.seller.name : "N/A"}
+                      </span>
                     </div>
 
                     <div className="space-y-4">
@@ -579,13 +585,15 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="relative w-8 h-8 rounded-full overflow-hidden">
                         <Image
-                          src={order.seller.avatar || "/placeholder.svg"}
-                          alt={order.seller.name}
+                          src={"seller" in order ? order.seller.avatar : "/placeholder.svg"}
+                          alt={"seller" in order ? order.seller.name : "N/A"}
                           fill
                           className="object-cover"
                         />
                       </div>
-                      <span>Seller: {order.seller.name}</span>
+                      <span>
+                        Seller: {"seller" in order ? order.seller.name : "N/A"}
+                      </span>
                     </div>
 
                     <div className="space-y-4">
@@ -672,13 +680,15 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="relative w-8 h-8 rounded-full overflow-hidden">
                         <Image
-                          src={order.seller.avatar || "/placeholder.svg"}
-                          alt={order.seller.name}
+                          src={"seller" in order ? order.seller.avatar : "/placeholder.svg"}
+                          alt={"seller" in order ? order.seller.name : "N/A"}
                           fill
                           className="object-cover"
                         />
                       </div>
-                      <span>Seller: {order.seller.name}</span>
+                      <span>
+                        Seller: {"seller" in order ? order.seller.name : "N/A"}
+                      </span>
                     </div>
 
                     <div className="space-y-4">
@@ -940,14 +950,14 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  order.customer.avatar || "/placeholder.svg"
+                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
                                 }
-                                alt={order.customer.name}
+                                alt={"customer" in order ? order.customer.name : "N/A"}
                                 fill
                                 className="object-cover"
                               />
                             </div>
-                            <span>{order.customer.name}</span>
+                            <span>{"customer" in order ? order.customer.name : "N/A"}</span>
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -1044,17 +1054,19 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  order.customer.avatar || "/placeholder.svg"
+                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
                                 }
-                                alt={order.customer.name}
+                                alt={"customer" in order ? order.customer.name : "N/A"}
                                 fill
                                 className="object-cover"
                               />
                             </div>
                             <div>
-                              <div>Customer: {order.customer.name}</div>
+                              <div>
+                                Customer: {"customer" in order ? order.customer.name : "N/A"}
+                              </div>
                               <div className="text-sm text-muted-foreground">
-                                {order.customer.address}
+                                {"customer" in order ? order.customer.address : "N/A"}
                               </div>
                             </div>
                           </div>
@@ -1172,17 +1184,19 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  order.customer.avatar || "/placeholder.svg"
+                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
                                 }
-                                alt={order.customer.name}
+                                alt={"customer" in order ? order.customer.name : "N/A"}
                                 fill
                                 className="object-cover"
                               />
                             </div>
                             <div>
-                              <div>Customer: {order.customer.name}</div>
+                              <div>
+                                Customer: {"customer" in order ? order.customer.name : "N/A"}
+                              </div>
                               <div className="text-sm text-muted-foreground">
-                                {order.customer.address}
+                                {"customer" in order ? order.customer.address : "N/A"}
                               </div>
                             </div>
                           </div>
@@ -1280,17 +1294,19 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  order.customer.avatar || "/placeholder.svg"
+                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
                                 }
-                                alt={order.customer.name}
+                                alt={"customer" in order ? order.customer.name : "N/A"}
                                 fill
                                 className="object-cover"
                               />
                             </div>
                             <div>
-                              <div>Customer: {order.customer.name}</div>
+                              <div>
+                                Customer: {"customer" in order ? order.customer.name : "N/A"}
+                              </div>
                               <div className="text-sm text-muted-foreground">
-                                {order.customer.address}
+                                {"customer" in order ? order.customer.address : "N/A"}
                               </div>
                             </div>
                           </div>
@@ -1392,17 +1408,19 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  order.customer.avatar || "/placeholder.svg"
+                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
                                 }
-                                alt={order.customer.name}
+                                alt={"customer" in order ? order.customer.name : "N/A"}
                                 fill
                                 className="object-cover"
                               />
                             </div>
                             <div>
-                              <div>Customer: {order.customer.name}</div>
+                              <div>
+                                Customer: {"customer" in order ? order.customer.name : "N/A"}
+                              </div>
                               <div className="text-sm text-muted-foreground">
-                                {order.customer.address}
+                                {"customer" in order ? order.customer.address : "N/A"}
                               </div>
                             </div>
                           </div>
