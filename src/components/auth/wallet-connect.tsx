@@ -59,20 +59,20 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
     router.push("/select-role");
   };
 
-  const selectRole = (selectedRole: UserRole) => {
-    setRole(selectedRole);
-    setShowRoleSelection(false);
+  // const selectRole = (selectedRole: UserRole) => {
+  //   setRole(selectedRole);
+  //   setShowRoleSelection(false);
 
-    // Save role to localStorage
-    localStorage.setItem("userRole", selectedRole || "");
+  //   // Save role to localStorage
+  //   localStorage.setItem("userRole", selectedRole || "");
 
-    if (onRoleSelect) {
-      onRoleSelect(selectedRole);
-    }
+  //   if (onRoleSelect) {
+  //     onRoleSelect(selectedRole);
+  //   }
 
-    // Redirect to home page
-    router.push("/");
-  };
+  //   // Redirect to home page
+  //   router.push("/");
+  // };
 
   const disconnectWallet = () => {
     setWalletAddress("");

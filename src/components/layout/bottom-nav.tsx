@@ -21,7 +21,7 @@ export default function BottomNav() {
 
   // Define navigation items based on user role
   const buyerNavItems = [
-    { name: "Home", href: "/", icon: Home },
+    { name: "Home", href: "/buyer-home", icon: Home },
     { name: "Marketplace", href: "/marketplace", icon: ShoppingBag },
     { name: "Orders", href: "/orders", icon: Package },
     { name: "Wallet", href: "/wallet", icon: Wallet },
@@ -29,14 +29,15 @@ export default function BottomNav() {
   ];
 
   const sellerNavItems = [
-    { name: "Dashboard", href: "/", icon: BarChart },
+    { name: "Dashboard", href: "/seller-home", icon: BarChart },
     { name: "Products", href: "/products", icon: Sprout },
     { name: "Orders", href: "/orders", icon: Truck },
     { name: "Wallet", href: "/wallet", icon: Wallet },
     { name: "Profile", href: "/profile", icon: User },
   ];
 
-  const navItems = role === "seller" ? sellerNavItems : buyerNavItems;
+  const navItems =
+    role === "seller" ? sellerNavItems : role === "buyer" ? buyerNavItems : [];
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 bg-background border-t border-border">

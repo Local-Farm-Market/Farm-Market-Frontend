@@ -27,9 +27,14 @@ export default function SelectRolePage() {
       return;
     }
 
-    // If role is already selected, redirect to home
-    if (savedRole) {
-      router.push("/");
+    // If role is already selected, redirect to the selected role's home
+    if (savedRole === "buyer") {
+      router.push("/buyer-home");
+      return;
+    }
+
+    if (savedRole === "seller") {
+      router.push("/seller-home");
       return;
     }
 
@@ -44,7 +49,15 @@ export default function SelectRolePage() {
     setRole(selectedRole);
 
     // Redirect to home page
-    router.push("/");
+    if (selectedRole === "buyer") {
+      router.push("/buyer-home");
+      return;
+    }
+
+    if (selectedRole === "seller") {
+      router.push("/seller-home");
+      return;
+    }
   };
 
   const goBack = () => {

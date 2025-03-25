@@ -98,7 +98,7 @@ const mockOrders = [
   },
 ];
 
-export function SellerDashboard() {
+export default function SellerDashboard() {
   const { setRole } = useUserRole();
 
   const getStatusColor = (status: string) => {
