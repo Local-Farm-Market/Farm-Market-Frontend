@@ -1,11 +1,7 @@
-import { CheckCircle, Clock, Truck, AlertTriangle } from "lucide-react";
+import { CheckCircle, Clock, Truck } from "lucide-react";
 import { cn } from "@/src/lib/utils";
 
-type TransactionStatus =
-  | "payment_escrowed"
-  | "in_delivery"
-  | "completed"
-  | "disputed";
+type TransactionStatus = "payment_escrowed" | "in_delivery" | "completed";
 
 interface TransactionTrackerProps {
   status: TransactionStatus;
@@ -20,34 +16,24 @@ export function TransactionTracker({ status }: TransactionTrackerProps) {
       complete: ["payment_escrowed", "in_delivery", "completed"].includes(
         status
       ),
-      disputed: status === "disputed",
     },
     {
       id: "in_delivery",
       name: "In Delivery",
       icon: Truck,
       complete: ["in_delivery", "completed"].includes(status),
-      disputed: status === "disputed",
     },
     {
       id: "completed",
       name: "Completed",
       icon: CheckCircle,
       complete: status === "completed",
-      disputed: status === "disputed",
     },
   ];
 
   return (
     <div className="w-full">
       <div className="space-y-2">
-        {status === "disputed" && (
-          <div className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 p-3 rounded-md flex items-center gap-2 mb-4">
-            <AlertTriangle className="h-5 w-5" />
-            <span>This transaction is currently under dispute</span>
-          </div>
-        )}
-
         <div className="relative">
           <div className="overflow-hidden h-2 mb-6 flex rounded bg-muted">
             {steps.map((step, index) => (
@@ -55,11 +41,7 @@ export function TransactionTracker({ status }: TransactionTrackerProps) {
                 key={step.id}
                 className={cn(
                   "h-full transition-all duration-300",
-                  step.complete
-                    ? "bg-primary"
-                    : step.disputed
-                    ? "bg-yellow-500"
-                    : "bg-transparent",
+                  step.complete ? "bg-primary" : "bg-transparent",
                   index === 0 ? "rounded-l" : "",
                   index === steps.length - 1 ? "rounded-r" : ""
                 )}
@@ -76,8 +58,6 @@ export function TransactionTracker({ status }: TransactionTrackerProps) {
                     "flex items-center justify-center w-10 h-10 rounded-full mb-2",
                     step.complete
                       ? "bg-primary text-primary-foreground"
-                      : step.disputed
-                      ? "bg-yellow-500 text-yellow-50"
                       : "bg-muted text-muted-foreground"
                   )}
                 >

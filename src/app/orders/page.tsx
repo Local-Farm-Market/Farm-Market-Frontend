@@ -19,7 +19,6 @@ import {
   CardTitle,
 } from "@/src/components/ui/card";
 import { TransactionTracker } from "@/src/components/escrow/transaction-tracker";
-import { DisputeButton } from "@/src/components/escrow/dispute-button";
 import { Badge } from "@/src/components/ui/badge";
 import { useUserRole } from "@/src/hooks/use-user-role";
 import { WalletConnect } from "@/src/components/auth/wallet-connect";
@@ -42,9 +41,7 @@ import {
 import { Input } from "@/src/components/ui/input";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 
-type Order = 
-  | (typeof buyerOrders)[number]
-  | (typeof sellerOrders)[number];
+type Order = (typeof buyerOrders)[number] | (typeof sellerOrders)[number];
 
 // Mock order data for buyers
 const buyerOrders = [
@@ -119,26 +116,6 @@ const buyerOrders = [
     seller: {
       id: "seller3",
       name: "Berry Fields",
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-  },
-  {
-    id: "12348",
-    date: new Date(Date.now() - 1209600000),
-    status: "disputed" as const,
-    total: 6.99,
-    items: [
-      {
-        id: "6",
-        title: "Organic Quinoa",
-        price: 6.99,
-        quantity: 1,
-        image: "/placeholder.svg?height=200&width=200",
-      },
-    ],
-    seller: {
-      id: "seller4",
-      name: "Golden Fields",
       avatar: "/placeholder.svg?height=100&width=100",
     },
   },
@@ -223,47 +200,16 @@ const sellerOrders = [
       },
     ],
   },
-  {
-    id: "12348",
-    date: new Date(Date.now() - 1209600000),
-    status: "disputed" as const,
-    total: 6.99,
-    customer: {
-      id: "cust4",
-      name: "Emily Davis",
-      avatar: "/placeholder.svg?height=100&width=100",
-      address: "321 Cedar Rd, Nowhere, WA 13579",
-    },
-    items: [
-      {
-        id: "6",
-        title: "Organic Quinoa",
-        price: 6.99,
-        quantity: 1,
-        image: "/placeholder.svg?height=200&width=200",
-      },
-    ],
-  },
 ];
 
 export default function OrdersPage() {
   const { role, setRole } = useUserRole();
   const [orders, setOrders] = useState<Order[]>(
-  role === "seller" ? sellerOrders : buyerOrders
-);
+    role === "seller" ? sellerOrders : buyerOrders
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
-
-  const handleDisputeSubmit = (orderId: string, reason: string) => {
-    console.log(`Dispute submitted for order ${orderId}: ${reason}`);
-    // In a real app, this would submit the dispute to the backend
-    setOrders(
-      orders.map((order) =>
-        order.id === orderId ? { ...order, status: "disputed" as const } : order
-      )
-    );
-  };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -422,12 +368,6 @@ export default function OrdersPage() {
           >
             Completed
           </TabsTrigger>
-          <TabsTrigger
-            value="disputed"
-            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
-          >
-            Disputed
-          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="active" className="space-y-6">
@@ -460,10 +400,6 @@ export default function OrdersPage() {
                         <MessageSquare className="h-4 w-4" />
                         <span className="hidden sm:inline">Contact Seller</span>
                       </Button>
-                      <DisputeButton
-                        orderId={order.id}
-                        onDisputeSubmit={handleDisputeSubmit}
-                      />
                     </div>
                   </div>
 
@@ -475,7 +411,11 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="relative w-8 h-8 rounded-full overflow-hidden">
                         <Image
-                          src={"seller" in order ? order.seller.avatar : "/placeholder.svg"}
+                          src={
+                            "seller" in order
+                              ? order.seller.avatar
+                              : "/placeholder.svg"
+                          }
                           alt={"seller" in order ? order.seller.name : "N/A"}
                           fill
                           className="object-cover"
@@ -585,7 +525,11 @@ export default function OrdersPage() {
                     <div className="flex items-center gap-3 mb-4">
                       <div className="relative w-8 h-8 rounded-full overflow-hidden">
                         <Image
-                          src={"seller" in order ? order.seller.avatar : "/placeholder.svg"}
+                          src={
+                            "seller" in order
+                              ? order.seller.avatar
+                              : "/placeholder.svg"
+                          }
                           alt={"seller" in order ? order.seller.name : "N/A"}
                           fill
                           className="object-cover"
@@ -639,107 +583,6 @@ export default function OrdersPage() {
               <p className="text-muted-foreground">
                 No completed orders found.
               </p>
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="disputed" className="space-y-6">
-          {orders
-            .filter((order) => order.status === "disputed")
-            .map((order) => (
-              <Card
-                key={order.id}
-                className="overflow-hidden border-amber-100 dark:border-amber-900/50"
-              >
-                <CardContent className="p-0">
-                  <div className="p-4 border-b flex justify-between items-center">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium">Order #{order.id}</h3>
-                        {getStatusBadge(order.status)}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Placed on {order.date.toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                    >
-                      <MessageSquare className="h-4 w-4" />
-                      <span className="hidden sm:inline">Contact Support</span>
-                    </Button>
-                  </div>
-
-                  <div className="p-4">
-                    <TransactionTracker status={order.status} />
-                  </div>
-
-                  <div className="p-4 border-t">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                        <Image
-                          src={"seller" in order ? order.seller.avatar : "/placeholder.svg"}
-                          alt={"seller" in order ? order.seller.name : "N/A"}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <span>
-                        Seller: {"seller" in order ? order.seller.name : "N/A"}
-                      </span>
-                    </div>
-
-                    <div className="space-y-4">
-                      {order.items.map((item) => (
-                        <div key={item.id} className="flex gap-4">
-                          <div className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0">
-                            <Image
-                              src={item.image || "/placeholder.svg"}
-                              alt={item.title}
-                              fill
-                              className="object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-medium">{item.title}</h4>
-                            <div className="flex justify-between mt-1">
-                              <span className="text-sm text-muted-foreground">
-                                ${item.price.toFixed(2)} x {item.quantity}
-                              </span>
-                              <span className="font-medium">
-                                ${(item.price * item.quantity).toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex justify-between mt-2 font-bold text-green-700 dark:text-green-400">
-                        <span>Total</span>
-                        <span>${order.total.toFixed(2)}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-md">
-                      <h4 className="font-medium mb-1">Dispute Status</h4>
-                      <p className="text-sm">
-                        Your dispute is currently being reviewed. We'll update
-                        you within 48 hours.
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-
-          {orders.filter((order) => order.status === "disputed").length ===
-            0 && (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground">No disputed orders found.</p>
             </div>
           )}
         </TabsContent>
@@ -867,20 +710,20 @@ export default function OrdersPage() {
           >
             Completed
           </TabsTrigger>
-          <TabsTrigger
+          {/* <TabsTrigger
             value="disputed"
             className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
           >
             Disputed
-          </TabsTrigger>
+          </TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="all">
           <Card>
             <CardHeader className="pb-0">
-              <div className="flex justify-between items-center">
+              <div className="flex justify-between items-center pb-4">
                 <CardTitle>All Orders</CardTitle>
-                <div className="flex gap-2">
+                {/* <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -897,7 +740,7 @@ export default function OrdersPage() {
                     <Printer className="h-4 w-4" />
                     Print
                   </Button>
-                </div>
+                </div> */}
               </div>
             </CardHeader>
             <CardContent>
@@ -950,14 +793,24 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
+                                  "customer" in order
+                                    ? order.customer.avatar
+                                    : "/placeholder.svg"
                                 }
-                                alt={"customer" in order ? order.customer.name : "N/A"}
+                                alt={
+                                  "customer" in order
+                                    ? order.customer.name
+                                    : "N/A"
+                                }
                                 fill
                                 className="object-cover"
                               />
                             </div>
-                            <span>{"customer" in order ? order.customer.name : "N/A"}</span>
+                            <span>
+                              {"customer" in order
+                                ? order.customer.name
+                                : "N/A"}
+                            </span>
                           </div>
                         </td>
                         <td className="py-3 px-4">
@@ -1054,19 +907,30 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
+                                  "customer" in order
+                                    ? order.customer.avatar
+                                    : "/placeholder.svg"
                                 }
-                                alt={"customer" in order ? order.customer.name : "N/A"}
+                                alt={
+                                  "customer" in order
+                                    ? order.customer.name
+                                    : "N/A"
+                                }
                                 fill
                                 className="object-cover"
                               />
                             </div>
                             <div>
                               <div>
-                                Customer: {"customer" in order ? order.customer.name : "N/A"}
+                                Customer:{" "}
+                                {"customer" in order
+                                  ? order.customer.name
+                                  : "N/A"}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {"customer" in order ? order.customer.address : "N/A"}
+                                {"customer" in order
+                                  ? order.customer.address
+                                  : "N/A"}
                               </div>
                             </div>
                           </div>
@@ -1155,7 +1019,7 @@ export default function OrdersPage() {
                               Placed on {order.date.toLocaleDateString()}
                             </p>
                           </div>
-                          <div className="flex gap-2">
+                          {/* <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
@@ -1172,7 +1036,7 @@ export default function OrdersPage() {
                             >
                               Mark Delivered
                             </Button>
-                          </div>
+                          </div> */}
                         </div>
 
                         <div className="p-4">
@@ -1184,19 +1048,30 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
+                                  "customer" in order
+                                    ? order.customer.avatar
+                                    : "/placeholder.svg"
                                 }
-                                alt={"customer" in order ? order.customer.name : "N/A"}
+                                alt={
+                                  "customer" in order
+                                    ? order.customer.name
+                                    : "N/A"
+                                }
                                 fill
                                 className="object-cover"
                               />
                             </div>
                             <div>
                               <div>
-                                Customer: {"customer" in order ? order.customer.name : "N/A"}
+                                Customer:{" "}
+                                {"customer" in order
+                                  ? order.customer.name
+                                  : "N/A"}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {"customer" in order ? order.customer.address : "N/A"}
+                                {"customer" in order
+                                  ? order.customer.address
+                                  : "N/A"}
                               </div>
                             </div>
                           </div>
@@ -1294,19 +1169,30 @@ export default function OrdersPage() {
                             <div className="relative w-8 h-8 rounded-full overflow-hidden">
                               <Image
                                 src={
-                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
+                                  "customer" in order
+                                    ? order.customer.avatar
+                                    : "/placeholder.svg"
                                 }
-                                alt={"customer" in order ? order.customer.name : "N/A"}
+                                alt={
+                                  "customer" in order
+                                    ? order.customer.name
+                                    : "N/A"
+                                }
                                 fill
                                 className="object-cover"
                               />
                             </div>
                             <div>
                               <div>
-                                Customer: {"customer" in order ? order.customer.name : "N/A"}
+                                Customer:{" "}
+                                {"customer" in order
+                                  ? order.customer.name
+                                  : "N/A"}
                               </div>
                               <div className="text-sm text-muted-foreground">
-                                {"customer" in order ? order.customer.address : "N/A"}
+                                {"customer" in order
+                                  ? order.customer.address
+                                  : "N/A"}
                               </div>
                             </div>
                           </div>
@@ -1353,137 +1239,6 @@ export default function OrdersPage() {
                   <div className="text-center py-12">
                     <p className="text-muted-foreground">
                       No completed orders found.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="disputed">
-          {/* Similar structure but filtered for disputed status */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Disputed Orders</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {orders
-                  .filter((order) => order.status === "disputed")
-                  .map((order) => (
-                    <Card
-                      key={order.id}
-                      className="overflow-hidden border-amber-100 dark:border-amber-900/50"
-                    >
-                      <CardContent className="p-0">
-                        <div className="p-4 border-b flex justify-between items-center">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <h3 className="font-medium">Order #{order.id}</h3>
-                              {getStatusBadge(order.status)}
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Placed on {order.date.toLocaleDateString()}
-                            </p>
-                          </div>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                          >
-                            <MessageSquare className="h-4 w-4" />
-                            <span className="hidden sm:inline">
-                              Contact Support
-                            </span>
-                          </Button>
-                        </div>
-
-                        <div className="p-4">
-                          <TransactionTracker status={order.status} />
-                        </div>
-
-                        <div className="p-4 border-t">
-                          <div className="flex items-center gap-3 mb-4">
-                            <div className="relative w-8 h-8 rounded-full overflow-hidden">
-                              <Image
-                                src={
-                                  "customer" in order ? order.customer.avatar : "/placeholder.svg"
-                                }
-                                alt={"customer" in order ? order.customer.name : "N/A"}
-                                fill
-                                className="object-cover"
-                              />
-                            </div>
-                            <div>
-                              <div>
-                                Customer: {"customer" in order ? order.customer.name : "N/A"}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {"customer" in order ? order.customer.address : "N/A"}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="space-y-4">
-                            {order.items.map((item) => (
-                              <div key={item.id} className="flex gap-4">
-                                <div className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0">
-                                  <Image
-                                    src={item.image || "/placeholder.svg"}
-                                    alt={item.title}
-                                    fill
-                                    className="object-cover"
-                                  />
-                                </div>
-                                <div className="flex-1">
-                                  <h4 className="font-medium">{item.title}</h4>
-                                  <div className="flex justify-between mt-1">
-                                    <span className="text-sm text-muted-foreground">
-                                      ${item.price.toFixed(2)} x {item.quantity}
-                                    </span>
-                                    <span className="font-medium">
-                                      ${(item.price * item.quantity).toFixed(2)}
-                                    </span>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-
-                          <div className="mt-4 pt-4 border-t">
-                            <div className="flex justify-between mt-2 font-bold text-green-700 dark:text-green-400">
-                              <span>Total</span>
-                              <span>${order.total.toFixed(2)}</span>
-                            </div>
-                          </div>
-
-                          <div className="mt-4 p-3 bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 rounded-md">
-                            <h4 className="font-medium mb-1">
-                              Dispute Details
-                            </h4>
-                            <p className="text-sm">
-                              Customer has reported an issue with this order.
-                              Please review the details and respond within 48
-                              hours.
-                            </p>
-                            <Button
-                              className="mt-3 bg-amber-600 hover:bg-amber-700 text-white"
-                              size="sm"
-                            >
-                              Respond to Dispute
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-
-                {orders.filter((order) => order.status === "disputed")
-                  .length === 0 && (
-                  <div className="text-center py-12">
-                    <p className="text-muted-foreground">
-                      No disputed orders found.
                     </p>
                   </div>
                 )}

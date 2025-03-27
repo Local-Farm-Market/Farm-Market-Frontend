@@ -1,4 +1,4 @@
-"use client";
+"\"use client";
 
 import { useState } from "react";
 import { Button } from "@/src/components/ui/button";
@@ -26,7 +26,7 @@ export function OrderSuccessDemonstration() {
 
   // Order/transaction state
   const [currentStatus, setCurrentStatus] = useState<
-    "payment_escrowed" | "in_delivery" | "completed" | "disputed"
+    "payment_escrowed" | "in_delivery" | "completed"
   >("payment_escrowed");
 
   // Mock order data

@@ -12,17 +12,9 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/src/components/ui/tabs";
-import {
-  MapPin,
-  Calendar,
-  User,
-  ShoppingCart,
-  MessageSquare,
-} from "lucide-react";
+import { MapPin, Calendar, User, ShoppingCart } from "lucide-react";
 import { QrVerification } from "@/src/components/product/qr-verification";
 import { TransactionTracker } from "@/src/components/escrow/transaction-tracker";
-import { DisputeButton } from "@/src/components/escrow/dispute-button";
-import { ChatInterface } from "@/src/components/chat/chat-interface";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 
 // Mock product data
@@ -242,11 +234,6 @@ export default function ProductPage() {
     setOrderPlaced(true);
   };
 
-  const handleDisputeSubmit = (orderId: string, reason: string) => {
-    console.log(`Dispute submitted for order ${orderId}: ${reason}`);
-    // In a real app, this would submit the dispute to the backend
-  };
-
   return (
     <ProtectedRoute requireAuth={true}>
       <div className="py-6">
@@ -361,10 +348,6 @@ export default function ProductPage() {
                 <ShoppingCart className="h-4 w-4" />
                 {orderPlaced ? "Order Placed" : "Buy Now"}
               </Button>
-              <Button variant="outline" className="gap-2">
-                <MessageSquare className="h-4 w-4" />
-                Chat
-              </Button>
             </div>
 
             <div className="mt-6">
@@ -381,7 +364,7 @@ export default function ProductPage() {
         {/* Additional Information Tabs */}
         <div className="mt-12">
           <Tabs defaultValue="details">
-            <TabsList className="grid grid-cols-4 mb-6">
+            <TabsList className="grid grid-cols-3 mb-6">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
               <TabsTrigger value="farmer">Farmer</TabsTrigger>
@@ -489,10 +472,6 @@ export default function ProductPage() {
                     His farm is certified organic and uses sustainable farming
                     practices to grow the highest quality produce.
                   </p>
-                  <ChatInterface
-                    recipientName={product.farmer.name}
-                    recipientAvatar={product.farmer.avatar}
-                  />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -512,10 +491,6 @@ export default function ProductPage() {
                             Placed on {new Date().toLocaleDateString()}
                           </p>
                         </div>
-                        <DisputeButton
-                          orderId="12345"
-                          onDisputeSubmit={handleDisputeSubmit}
-                        />
                       </div>
 
                       <div className="border-t pt-4">

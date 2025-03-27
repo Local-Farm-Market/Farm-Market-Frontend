@@ -22,7 +22,8 @@ import {
   Users,
   Star,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { ReviewsModal } from "@/src/components/seller/reviews-modal";
 
 // Mock data for seller dashboard
 const mockSalesData = [
@@ -36,10 +37,11 @@ const mockSalesData = [
 
 export default function SellerDashboard() {
   const { setRole } = useUserRole();
-  const router = useRouter();
   // Use the product management hook
   const { products, setAddProductModalOpen, renderModals } =
     useProductManagement();
+  // Add state for reviews modal
+  const [reviewsModalOpen, setReviewsModalOpen] = useState(false);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -79,9 +81,9 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-green-900 dark:text-green-200">
                 $12,450
               </h3>
-              {/* <p className="text-xs text-green-700 dark:text-green-400 flex items-center mt-1">
+              <p className="text-xs text-green-700 dark:text-green-400 flex items-center mt-1">
                 <TrendingUp className="h-3 w-3 mr-1" /> +12% from last month
-              </p> */}
+              </p>
             </div>
             <div className="h-12 w-12 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-green-700 dark:text-green-300" />
@@ -98,10 +100,10 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-amber-900 dark:text-amber-200">
                 {products.length}
               </h3>
-              {/* <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
                 {products.filter((p) => p.status === "out_of_stock").length} out
                 of stock
-              </p> */}
+              </p>
             </div>
             <div className="h-12 w-12 bg-amber-200 dark:bg-amber-800 rounded-full flex items-center justify-center">
               <ShoppingBag className="h-6 w-6 text-amber-700 dark:text-amber-300" />
@@ -118,9 +120,9 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-blue-900 dark:text-blue-200">
                 156
               </h3>
-              {/* <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+              <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
                 12 pending fulfillment
-              </p> */}
+              </p>
             </div>
             <div className="h-12 w-12 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
               <Package className="h-6 w-6 text-blue-700 dark:text-blue-300" />
@@ -137,9 +139,9 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-purple-900 dark:text-purple-200">
                 89
               </h3>
-              {/* <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">
+              <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">
                 4.8 average rating
-              </p> */}
+              </p>
             </div>
             <div className="h-12 w-12 bg-purple-200 dark:bg-purple-800 rounded-full flex items-center justify-center">
               <Users className="h-6 w-6 text-purple-700 dark:text-purple-300" />
@@ -151,7 +153,7 @@ export default function SellerDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content area */}
         <div className="lg:col-span-2 space-y-6">
-          {/* <Card>
+          <Card>
             <CardHeader className="pb-0">
               <CardTitle className="text-lg flex items-center">
                 <BarChart3 className="h-5 w-5 mr-2 text-amber-600" />
@@ -171,7 +173,7 @@ export default function SellerDashboard() {
                 ))}
               </div>
             </CardContent>
-          </Card> */}
+          </Card>
 
           <Card>
             <CardHeader className="pb-2">
@@ -184,7 +186,6 @@ export default function SellerDashboard() {
                   variant="outline"
                   size="sm"
                   className="text-green-700 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950/30"
-                  onClick={() => router.push("/orders")}
                 >
                   View All
                 </Button>
@@ -304,11 +305,7 @@ export default function SellerDashboard() {
                   </div>
                 ))}
               </div>
-              <Button
-                onClick={() => router.push("/products")}
-                variant="outline"
-                className="w-full mt-4"
-              >
+              <Button variant="outline" className="w-full mt-4">
                 View All Products
               </Button>
             </CardContent>
@@ -362,6 +359,14 @@ export default function SellerDashboard() {
                     - Michael T.
                   </p>
                 </div>
+
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => setReviewsModalOpen(true)}
+                >
+                  View All Reviews
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -370,6 +375,12 @@ export default function SellerDashboard() {
 
       {/* Render the product modals */}
       {renderModals()}
+
+      {/* Add the reviews modal */}
+      <ReviewsModal
+        open={reviewsModalOpen}
+        onOpenChange={setReviewsModalOpen}
+      />
     </div>
   );
 }
