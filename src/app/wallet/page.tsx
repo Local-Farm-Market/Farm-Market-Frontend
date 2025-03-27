@@ -1,8 +1,12 @@
 "use client";
 
-import { Badge } from "@/src/components/ui/badge";
-
 import { useState } from "react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/src/components/ui/tabs";
 import { Button } from "@/src/components/ui/button";
 import {
   Card,
@@ -10,19 +14,15 @@ import {
   CardHeader,
   CardTitle,
 } from "@/src/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/src/components/ui/tabs";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { WalletConnect } from "@/src/components/auth/wallet-connect";
-import { useUserRole } from "@/src/hooks/use-user-role";
 import { NotificationPanel } from "@/src/components/notifications/notification-panel";
 import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
+import { useUserRole } from "@/src/hooks/use-user-role";
+import PayoutsTab from "@/src/app/wallet/payouts-tab";
+
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -398,7 +398,7 @@ export default function WalletPage() {
                     id="recipient"
                     placeholder="Enter recipient's wallet address"
                     value={recipientAddress}
-                    onChange={(e) => setRecipientAddress(e.target.value)}
+                    onChange={(e: any) => setRecipientAddress(e.target.value)}
                     className="border-amber-200 dark:border-amber-800"
                   />
                 </div>
@@ -409,7 +409,7 @@ export default function WalletPage() {
                     type="number"
                     placeholder="0.00"
                     value={sendAmount}
-                    onChange={(e) => setSendAmount(e.target.value)}
+                    onChange={(e: any) => setSendAmount(e.target.value)}
                     className="border-amber-200 dark:border-amber-800"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -798,120 +798,7 @@ export default function WalletPage() {
         </TabsContent>
 
         <TabsContent value="payouts">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <ArrowDownLeft className="h-5 w-5 mr-2 text-green-600" />
-                Payout Settings
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="p-4 border rounded-md border-green-200 dark:border-green-800">
-                  <h3 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                    Current Payout Method
-                  </h3>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
-                      <Wallet className="h-4 w-4 text-green-600 dark:text-green-400" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Lisk Wallet</div>
-                      <div className="text-xs font-mono text-muted-foreground">
-                        {walletAddress}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Payout Schedule</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          id="instant"
-                          name="payout"
-                          className="text-amber-600"
-                          checked
-                        />
-                        <Label htmlFor="instant">
-                          Instant (after escrow release)
-                        </Label>
-                      </div>
-                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                        Active
-                      </Badge>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          id="daily"
-                          name="payout"
-                          className="text-amber-600"
-                        />
-                        <Label htmlFor="daily">Daily</Label>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          id="weekly"
-                          name="payout"
-                          className="text-amber-600"
-                        />
-                        <Label htmlFor="weekly">Weekly (Monday)</Label>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Pending Payouts</h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 border rounded-md border-amber-100 dark:border-amber-900/50">
-                      <div>
-                        <div className="font-medium">Order #12345</div>
-                        <div className="text-xs text-muted-foreground">
-                          Organic Tomatoes (x5)
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-amber-600 dark:text-amber-400">
-                          $19.95
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          In escrow
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-between items-center p-3 border rounded-md border-amber-100 dark:border-amber-900/50">
-                      <div>
-                        <div className="font-medium">Order #12346</div>
-                        <div className="text-xs text-muted-foreground">
-                          Grass-Fed Beef (x2)
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-amber-600 dark:text-amber-400">
-                          $25.98
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          In escrow
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          <PayoutsTab />
         </TabsContent>
 
         <TabsContent value="banking">

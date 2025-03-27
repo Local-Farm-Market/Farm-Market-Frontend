@@ -10,6 +10,7 @@ import { WalletConnect } from "@/src/components/auth/wallet-connect";
 import { NotificationPanel } from "@/src/components/notifications/notification-panel";
 import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import { useUserRole } from "@/src/hooks/use-user-role";
+import { useProductManagement } from "@/src/hooks/use-product-management";
 import {
   BarChart3,
   TrendingUp,
@@ -21,6 +22,7 @@ import {
   Users,
   Star,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 // Mock data for seller dashboard
 const mockSalesData = [
@@ -32,74 +34,12 @@ const mockSalesData = [
   { month: "Jun", amount: 3600 },
 ];
 
-const mockProducts = [
-  {
-    id: "1",
-    title: "Fresh Organic Tomatoes",
-    price: 3.99,
-    stock: 45,
-    sold: 120,
-    status: "active",
-  },
-  {
-    id: "2",
-    title: "Grass-Fed Beef",
-    price: 12.99,
-    stock: 20,
-    sold: 35,
-    status: "active",
-  },
-  {
-    id: "3",
-    title: "Organic Free-Range Eggs",
-    price: 5.49,
-    stock: 0,
-    sold: 80,
-    status: "out_of_stock",
-  },
-  {
-    id: "4",
-    title: "Fresh Strawberries",
-    price: 4.99,
-    stock: 15,
-    sold: 65,
-    status: "active",
-  },
-];
-
-const mockOrders = [
-  {
-    id: "ORD-12345",
-    customer: "John Doe",
-    date: "2023-05-15",
-    amount: 45.97,
-    status: "completed",
-  },
-  {
-    id: "ORD-12346",
-    customer: "Jane Smith",
-    date: "2023-05-16",
-    amount: 12.99,
-    status: "processing",
-  },
-  {
-    id: "ORD-12347",
-    customer: "Robert Johnson",
-    date: "2023-05-16",
-    amount: 23.48,
-    status: "processing",
-  },
-  {
-    id: "ORD-12348",
-    customer: "Emily Davis",
-    date: "2023-05-17",
-    amount: 9.99,
-    status: "pending",
-  },
-];
-
 export default function SellerDashboard() {
   const { setRole } = useUserRole();
+  const router = useRouter();
+  // Use the product management hook
+  const { products, setAddProductModalOpen, renderModals } =
+    useProductManagement();
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -139,9 +79,9 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-green-900 dark:text-green-200">
                 $12,450
               </h3>
-              <p className="text-xs text-green-700 dark:text-green-400 flex items-center mt-1">
+              {/* <p className="text-xs text-green-700 dark:text-green-400 flex items-center mt-1">
                 <TrendingUp className="h-3 w-3 mr-1" /> +12% from last month
-              </p>
+              </p> */}
             </div>
             <div className="h-12 w-12 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-green-700 dark:text-green-300" />
@@ -156,11 +96,12 @@ export default function SellerDashboard() {
                 Products
               </p>
               <h3 className="text-2xl font-bold text-amber-900 dark:text-amber-200">
-                24
+                {products.length}
               </h3>
-              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                3 out of stock
-              </p>
+              {/* <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                {products.filter((p) => p.status === "out_of_stock").length} out
+                of stock
+              </p> */}
             </div>
             <div className="h-12 w-12 bg-amber-200 dark:bg-amber-800 rounded-full flex items-center justify-center">
               <ShoppingBag className="h-6 w-6 text-amber-700 dark:text-amber-300" />
@@ -177,9 +118,9 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-blue-900 dark:text-blue-200">
                 156
               </h3>
-              <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+              {/* <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
                 12 pending fulfillment
-              </p>
+              </p> */}
             </div>
             <div className="h-12 w-12 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
               <Package className="h-6 w-6 text-blue-700 dark:text-blue-300" />
@@ -196,9 +137,9 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-purple-900 dark:text-purple-200">
                 89
               </h3>
-              <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">
+              {/* <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">
                 4.8 average rating
-              </p>
+              </p> */}
             </div>
             <div className="h-12 w-12 bg-purple-200 dark:bg-purple-800 rounded-full flex items-center justify-center">
               <Users className="h-6 w-6 text-purple-700 dark:text-purple-300" />
@@ -210,8 +151,8 @@ export default function SellerDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main content area */}
         <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader className="pb-2">
+          {/* <Card>
+            <CardHeader className="pb-0">
               <CardTitle className="text-lg flex items-center">
                 <BarChart3 className="h-5 w-5 mr-2 text-amber-600" />
                 Sales Overview
@@ -230,7 +171,7 @@ export default function SellerDashboard() {
                 ))}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
 
           <Card>
             <CardHeader className="pb-2">
@@ -243,6 +184,7 @@ export default function SellerDashboard() {
                   variant="outline"
                   size="sm"
                   className="text-green-700 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950/30"
+                  onClick={() => router.push("/orders")}
                 >
                   View All
                 </Button>
@@ -250,7 +192,36 @@ export default function SellerDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockOrders.map((order) => (
+                {[
+                  {
+                    id: "ORD-12345",
+                    customer: "John Doe",
+                    date: "2023-05-15",
+                    amount: 45.97,
+                    status: "completed",
+                  },
+                  {
+                    id: "ORD-12346",
+                    customer: "Jane Smith",
+                    date: "2023-05-16",
+                    amount: 12.99,
+                    status: "processing",
+                  },
+                  {
+                    id: "ORD-12347",
+                    customer: "Robert Johnson",
+                    date: "2023-05-16",
+                    amount: 23.48,
+                    status: "processing",
+                  },
+                  {
+                    id: "ORD-12348",
+                    customer: "Emily Davis",
+                    date: "2023-05-17",
+                    amount: 9.99,
+                    status: "pending",
+                  },
+                ].map((order) => (
                   <div
                     key={order.id}
                     className="flex justify-between items-center p-3 border rounded-md"
@@ -296,7 +267,10 @@ export default function SellerDashboard() {
                 <p className="text-sm text-green-700 dark:text-green-400 mb-4">
                   List your farm products quickly and start selling today
                 </p>
-                <Button className="bg-green-600 hover:bg-green-700 text-white w-full">
+                <Button
+                  className="bg-green-600 hover:bg-green-700 text-white w-full"
+                  onClick={() => setAddProductModalOpen(true)}
+                >
                   Add Product
                 </Button>
               </div>
@@ -312,7 +286,7 @@ export default function SellerDashboard() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {mockProducts.slice(0, 3).map((product) => (
+                {products.slice(0, 3).map((product) => (
                   <div
                     key={product.id}
                     className="flex justify-between items-center"
@@ -330,7 +304,11 @@ export default function SellerDashboard() {
                   </div>
                 ))}
               </div>
-              <Button variant="outline" className="w-full mt-4">
+              <Button
+                onClick={() => router.push("/products")}
+                variant="outline"
+                className="w-full mt-4"
+              >
                 View All Products
               </Button>
             </CardContent>
@@ -389,6 +367,9 @@ export default function SellerDashboard() {
           </Card>
         </div>
       </div>
+
+      {/* Render the product modals */}
+      {renderModals()}
     </div>
   );
 }

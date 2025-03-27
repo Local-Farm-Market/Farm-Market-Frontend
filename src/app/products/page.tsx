@@ -11,7 +11,6 @@ import {
 } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
-import { Label } from "@/src/components/ui/label";
 import {
   Tabs,
   TabsContent,
@@ -34,108 +33,34 @@ import {
   Trash2,
   Eye,
   ArrowUpDown,
-  Upload,
-  Camera,
 } from "lucide-react";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 
-// Mock product data for seller
-const mockProducts = [
-  {
-    id: "1",
-    title: "Fresh Organic Tomatoes",
-    price: 3.99,
-    image: "/placeholder.svg?height=200&width=200",
-    stock: 45,
-    sold: 120,
-    status: "active",
-    category: "Vegetables",
-    dateAdded: "2023-05-10",
-  },
-  {
-    id: "2",
-    title: "Grass-Fed Beef",
-    price: 12.99,
-    image: "/placeholder.svg?height=200&width=200",
-    stock: 20,
-    sold: 35,
-    status: "active",
-    category: "Meat",
-    dateAdded: "2023-05-12",
-  },
-  {
-    id: "3",
-    title: "Organic Free-Range Eggs",
-    price: 5.49,
-    image: "/placeholder.svg?height=200&width=200",
-    stock: 0,
-    sold: 80,
-    status: "out_of_stock",
-    category: "Poultry",
-    dateAdded: "2023-05-15",
-  },
-  {
-    id: "4",
-    title: "Fresh Strawberries",
-    price: 4.99,
-    image: "/placeholder.svg?height=200&width=200",
-    stock: 15,
-    sold: 65,
-    status: "active",
-    category: "Fruits",
-    dateAdded: "2023-05-18",
-  },
-  {
-    id: "5",
-    title: "Artisanal Goat Cheese",
-    price: 8.99,
-    image: "/placeholder.svg?height=200&width=200",
-    stock: 12,
-    sold: 28,
-    status: "active",
-    category: "Dairy",
-    dateAdded: "2023-05-20",
-  },
-  {
-    id: "6",
-    title: "Organic Quinoa",
-    price: 6.99,
-    image: "/placeholder.svg?height=200&width=200",
-    stock: 30,
-    sold: 42,
-    status: "active",
-    category: "Grains",
-    dateAdded: "2023-05-22",
-  },
-];
+// Update imports to use the new hook
+import { useProductManagement } from "@/src/hooks/use-product-management";
 
+// Replace the mockProducts array and related state/functions with the hook
 export default function ProductsPage() {
   const { role, setRole } = useUserRole();
   const router = useRouter();
-  const [showAddProduct, setShowAddProduct] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
   const [sortBy, setSortBy] = useState("dateAdded");
   const [sortOrder, setSortOrder] = useState("desc");
+
+  // Use the product management hook
+  const {
+    filteredProducts,
+    setAddProductModalOpen,
+    handleViewProduct,
+    handleEditProduct,
+    openDeleteModal,
+    filterProducts,
+    renderModals,
+  } = useProductManagement();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     filterProducts(searchQuery);
-  };
-
-  const filterProducts = (query: string) => {
-    if (!query) {
-      setFilteredProducts(mockProducts);
-      return;
-    }
-
-    const filtered = mockProducts.filter(
-      (product) =>
-        product.title.toLowerCase().includes(query.toLowerCase()) ||
-        product.category.toLowerCase().includes(query.toLowerCase())
-    );
-
-    setFilteredProducts(filtered);
   };
 
   const handleSort = (field: string) => {
@@ -164,7 +89,8 @@ export default function ProductsPage() {
       }
     });
 
-    setFilteredProducts(sorted);
+    // Update filtered products with sorted array
+    // setFilteredProducts(sorted)
   };
 
   const getStatusBadge = (status: string) => {
@@ -214,7 +140,7 @@ export default function ProductsPage() {
             </TabsList>
 
             <Button
-              onClick={() => setShowAddProduct(true)}
+              onClick={() => setAddProductModalOpen(true)}
               className="bg-green-600 hover:bg-green-700 text-white gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -338,6 +264,7 @@ export default function ProductsPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-amber-600"
+                                onClick={() => handleViewProduct(product)}
                               >
                                 <Eye className="h-4 w-4" />
                               </Button>
@@ -345,6 +272,7 @@ export default function ProductsPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-green-600"
+                                onClick={() => handleEditProduct(product)}
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -352,6 +280,7 @@ export default function ProductsPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-red-600"
+                                onClick={() => openDeleteModal(product)}
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -428,6 +357,7 @@ export default function ProductsPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-amber-600"
+                                  onClick={() => handleViewProduct(product)}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -435,6 +365,7 @@ export default function ProductsPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-green-600"
+                                  onClick={() => handleEditProduct(product)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -442,6 +373,7 @@ export default function ProductsPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-red-600"
+                                  onClick={() => openDeleteModal(product)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -521,6 +453,7 @@ export default function ProductsPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-amber-600"
+                                  onClick={() => handleViewProduct(product)}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
@@ -528,6 +461,7 @@ export default function ProductsPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-green-600"
+                                  onClick={() => handleEditProduct(product)}
                                 >
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -535,6 +469,7 @@ export default function ProductsPage() {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-red-600"
+                                  onClick={() => openDeleteModal(product)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -550,110 +485,8 @@ export default function ProductsPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Add Product Form */}
-        {showAddProduct && (
-          <Card className="mt-6 border-green-200 dark:border-green-800">
-            <CardHeader>
-              <CardTitle className="text-green-800 dark:text-green-400 flex items-center">
-                <Plus className="h-5 w-5 mr-2 text-green-600" />
-                Add New Product
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <form className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="title">Product Name</Label>
-                    <Input
-                      id="title"
-                      placeholder="Enter product name"
-                      className="border-amber-200 dark:border-amber-800"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="category">Category</Label>
-                    <Input
-                      id="category"
-                      placeholder="e.g. Vegetables, Fruits, etc."
-                      className="border-amber-200 dark:border-amber-800"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="price">Price ($)</Label>
-                    <Input
-                      id="price"
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="border-amber-200 dark:border-amber-800"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="stock">Stock Quantity</Label>
-                    <Input
-                      id="stock"
-                      type="number"
-                      placeholder="0"
-                      className="border-amber-200 dark:border-amber-800"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="unit">Unit</Label>
-                    <Input
-                      id="unit"
-                      placeholder="e.g. lb, kg, dozen"
-                      className="border-amber-200 dark:border-amber-800"
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
-                  <Input
-                    id="description"
-                    placeholder="Describe your product"
-                    className="border-amber-200 dark:border-amber-800"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Product Images</Label>
-                  <div className="border-2 border-dashed border-amber-200 dark:border-amber-800 rounded-md p-6 text-center">
-                    <div className="flex flex-col items-center">
-                      <Camera className="h-10 w-10 text-amber-500 mb-2" />
-                      <p className="text-sm text-muted-foreground mb-2">
-                        Drag and drop images here or click to browse
-                      </p>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 border-amber-200 dark:border-amber-800"
-                      >
-                        <Upload className="h-4 w-4" />
-                        Upload Images
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex justify-end gap-2 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowAddProduct(false)}
-                  >
-                    Cancel
-                  </Button>
-                  <Button className="bg-green-600 hover:bg-green-700 text-white">
-                    Add Product
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        )}
+        {/* Modals */}
+        {renderModals()}
       </div>
     </ProtectedRoute>
   );

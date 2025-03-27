@@ -24,7 +24,6 @@ interface WalletConnectProps {
 export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
-  const [showRoleSelection, setShowRoleSelection] = useState(false);
   const [role, setRole] = useState<UserRole>(null);
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [copied, setCopied] = useState(false);
