@@ -398,7 +398,7 @@ export default function WalletPage() {
                     id="recipient"
                     placeholder="Enter recipient's wallet address"
                     value={recipientAddress}
-                    onChange={(e: any) => setRecipientAddress(e.target.value)}
+                    onChange={(e) => setRecipientAddress(e.target.value)}
                     className="border-amber-200 dark:border-amber-800"
                   />
                 </div>
@@ -409,7 +409,7 @@ export default function WalletPage() {
                     type="number"
                     placeholder="0.00"
                     value={sendAmount}
-                    onChange={(e: any) => setSendAmount(e.target.value)}
+                    onChange={(e) => setSendAmount(e.target.value)}
                     className="border-amber-200 dark:border-amber-800"
                   />
                   <p className="text-xs text-muted-foreground">
@@ -578,12 +578,6 @@ export default function WalletPage() {
             className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
           >
             Payouts
-          </TabsTrigger>
-          <TabsTrigger
-            value="banking"
-            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
-          >
-            Banking
           </TabsTrigger>
         </TabsList>
 
@@ -799,68 +793,6 @@ export default function WalletPage() {
 
         <TabsContent value="payouts">
           <PayoutsTab />
-        </TabsContent>
-
-        <TabsContent value="banking">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <CreditCard className="h-5 w-5 mr-2 text-blue-600" />
-                Banking Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="p-4 border rounded-md border-blue-200 dark:border-blue-800">
-                  <h3 className="font-medium text-blue-800 dark:text-blue-300 mb-2">
-                    Connected Bank Account
-                  </h3>
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                      <CreditCard className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    </div>
-                    <div>
-                      <div className="font-medium">Farm Credit Union</div>
-                      <div className="text-xs text-muted-foreground">
-                        Account ending in 4567
-                      </div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
-                  >
-                    Change Bank Account
-                  </Button>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-medium mb-4">Tax Information</h3>
-                  <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-md">
-                    <div className="flex items-center gap-2 mb-2">
-                      <CheckCircle className="h-4 w-4 text-green-600" />
-                      <span className="font-medium">
-                        Tax information complete
-                      </span>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      Your tax information is up to date. You'll receive a
-                      1099-K form for the current tax year if your sales exceed
-                      $600.
-                    </p>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-4 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                    >
-                      View Tax Documents
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </>
