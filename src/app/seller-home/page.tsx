@@ -12,8 +12,6 @@ import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import { useUserRole } from "@/src/hooks/use-user-role";
 import { useProductManagement } from "@/src/hooks/use-product-management";
 import {
-  BarChart3,
-  TrendingUp,
   DollarSign,
   Package,
   Leaf,
@@ -24,6 +22,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { ReviewsModal } from "@/src/components/seller/reviews-modal";
+import { useRouter } from "next/navigation";
 
 // Mock data for seller dashboard
 const mockSalesData = [
@@ -37,6 +36,7 @@ const mockSalesData = [
 
 export default function SellerDashboard() {
   const { setRole } = useUserRole();
+  const route = useRouter();
   // Use the product management hook
   const { products, setAddProductModalOpen, renderModals } =
     useProductManagement();
@@ -81,9 +81,6 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-green-900 dark:text-green-200">
                 $12,450
               </h3>
-              <p className="text-xs text-green-700 dark:text-green-400 flex items-center mt-1">
-                <TrendingUp className="h-3 w-3 mr-1" /> +12% from last month
-              </p>
             </div>
             <div className="h-12 w-12 bg-green-200 dark:bg-green-800 rounded-full flex items-center justify-center">
               <DollarSign className="h-6 w-6 text-green-700 dark:text-green-300" />
@@ -100,10 +97,6 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-amber-900 dark:text-amber-200">
                 {products.length}
               </h3>
-              <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                {products.filter((p) => p.status === "out_of_stock").length} out
-                of stock
-              </p>
             </div>
             <div className="h-12 w-12 bg-amber-200 dark:bg-amber-800 rounded-full flex items-center justify-center">
               <ShoppingBag className="h-6 w-6 text-amber-700 dark:text-amber-300" />
@@ -120,9 +113,6 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-blue-900 dark:text-blue-200">
                 156
               </h3>
-              <p className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                12 pending fulfillment
-              </p>
             </div>
             <div className="h-12 w-12 bg-blue-200 dark:bg-blue-800 rounded-full flex items-center justify-center">
               <Package className="h-6 w-6 text-blue-700 dark:text-blue-300" />
@@ -139,9 +129,6 @@ export default function SellerDashboard() {
               <h3 className="text-2xl font-bold text-purple-900 dark:text-purple-200">
                 89
               </h3>
-              <p className="text-xs text-purple-700 dark:text-purple-400 mt-1">
-                4.8 average rating
-              </p>
             </div>
             <div className="h-12 w-12 bg-purple-200 dark:bg-purple-800 rounded-full flex items-center justify-center">
               <Users className="h-6 w-6 text-purple-700 dark:text-purple-300" />
@@ -154,28 +141,6 @@ export default function SellerDashboard() {
         {/* Main content area */}
         <div className="lg:col-span-2 space-y-6">
           <Card>
-            <CardHeader className="pb-0">
-              <CardTitle className="text-lg flex items-center">
-                <BarChart3 className="h-5 w-5 mr-2 text-amber-600" />
-                Sales Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] flex items-end justify-between gap-2 pt-4">
-                {mockSalesData.map((data) => (
-                  <div key={data.month} className="flex flex-col items-center">
-                    <div
-                      className="w-12 bg-gradient-to-t from-amber-500 to-amber-300 dark:from-amber-700 dark:to-amber-500 rounded-t-md"
-                      style={{ height: `${(data.amount / 4000) * 250}px` }}
-                    ></div>
-                    <span className="text-xs mt-2">{data.month}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-lg flex items-center">
@@ -183,6 +148,7 @@ export default function SellerDashboard() {
                   Recent Orders
                 </CardTitle>
                 <Button
+                  onClick={() => route.push("/orders")}
                   variant="outline"
                   size="sm"
                   className="text-green-700 border-green-200 hover:bg-green-50 dark:text-green-400 dark:border-green-800 dark:hover:bg-green-950/30"
@@ -305,7 +271,11 @@ export default function SellerDashboard() {
                   </div>
                 ))}
               </div>
-              <Button variant="outline" className="w-full mt-4">
+              <Button
+                onClick={() => route.push("/products")}
+                variant="outline"
+                className="w-full mt-4"
+              >
                 View All Products
               </Button>
             </CardContent>

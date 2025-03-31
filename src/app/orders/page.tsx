@@ -30,7 +30,6 @@ import {
   Package,
   Truck,
   CheckCircle,
-  AlertTriangle,
   Search,
   Filter,
   ArrowUpDown,
@@ -40,10 +39,30 @@ import {
 } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from "@/src/components/ui/dialog";
+import { Textarea } from "@/src/components/ui/textarea";
+import { ScrollArea } from "@/src/components/ui/scroll-area";
+import { Separator } from "@/src/components/ui/separator";
+import { Label } from "@/src/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/src/components/ui/select";
 
-type Order = (typeof buyerOrders)[number] | (typeof sellerOrders)[number];
+// Update the TransactionStatus type to remove "disputed"
+type TransactionStatus = "payment_escrowed" | "in_delivery" | "completed";
 
-// Mock order data for buyers
+// Update the buyer orders to remove disputed status
 const buyerOrders = [
   {
     id: "12345",
@@ -121,7 +140,7 @@ const buyerOrders = [
   },
 ];
 
-// Mock order data for sellers
+// Update the seller orders to remove disputed status
 const sellerOrders = [
   {
     id: "12345",
@@ -204,12 +223,61 @@ const sellerOrders = [
 
 export default function OrdersPage() {
   const { role, setRole } = useUserRole();
+  type Order =
+    | {
+        id: string;
+        date: Date;
+        status: TransactionStatus;
+        total: number;
+        customer: {
+          id: string;
+          name: string;
+          avatar: string;
+          address: string;
+        };
+        items: {
+          id: string;
+          title: string;
+          price: number;
+          quantity: number;
+          image: string;
+        }[];
+      }
+    | {
+        id: string;
+        date: Date;
+        status: TransactionStatus;
+        total: number;
+        seller: {
+          id: string;
+          name: string;
+          avatar: string;
+        };
+        items: {
+          id: string;
+          title: string;
+          price: number;
+          quantity: number;
+          image: string;
+        }[];
+      };
+
   const [orders, setOrders] = useState<Order[]>(
     role === "seller" ? sellerOrders : buyerOrders
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("date");
   const [sortOrder, setSortOrder] = useState("desc");
+
+  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [orderDetailsModalOpen, setOrderDetailsModalOpen] = useState(false);
+  const [processOrderModalOpen, setProcessOrderModalOpen] = useState(false);
+  const [contactBuyerModalOpen, setContactBuyerModalOpen] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [shippingCarrier, setShippingCarrier] = useState("FedEx");
+
+  const [currentTab, setCurrentTab] = useState("all");
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -308,18 +376,47 @@ export default function OrdersPage() {
             Completed
           </Badge>
         );
-      case "disputed":
-        return (
-          <Badge
-            variant="outline"
-            className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200 border-red-200 dark:border-red-800"
-          >
-            Disputed
-          </Badge>
-        );
       default:
         return <Badge variant="outline">Unknown</Badge>;
     }
+  };
+
+  const openOrderDetails = (order: any) => {
+    setSelectedOrder(order);
+    setOrderDetailsModalOpen(true);
+  };
+
+  const openProcessOrder = (order: any) => {
+    setSelectedOrder(order);
+    setProcessOrderModalOpen(true);
+    setTrackingNumber("");
+    setShippingCarrier("FedEx");
+  };
+
+  const openContactBuyer = (order: any) => {
+    setSelectedOrder(order);
+    setContactBuyerModalOpen(true);
+    setMessageText("");
+  };
+
+  const handleProcessOrder = () => {
+    // In a real app, this would make an API call
+    // For now, we'll just close the modal
+    setProcessOrderModalOpen(false);
+
+    // Show a success message or update the order status
+    alert(
+      `Order #${selectedOrder.id} has been processed and marked as shipped`
+    );
+  };
+
+  const handleSendMessage = () => {
+    // In a real app, this would send a message to the buyer
+    // For now, we'll just close the modal
+    setContactBuyerModalOpen(false);
+
+    // Show a success message
+    alert(`Message sent to ${selectedOrder?.customer?.name}`);
   };
 
   // Buyer-specific orders UI
@@ -416,13 +513,18 @@ export default function OrdersPage() {
                               ? order.seller.avatar
                               : "/placeholder.svg"
                           }
-                          alt={"seller" in order ? order.seller.name : "N/A"}
+                          alt={
+                            "seller" in order
+                              ? order.seller.name
+                              : "Unknown Seller"
+                          }
                           fill
                           className="object-cover"
                         />
                       </div>
                       <span>
-                        Seller: {"seller" in order ? order.seller.name : "N/A"}
+                        Seller:{" "}
+                        {"seller" in order ? order.seller.name : "Unknown"}
                       </span>
                     </div>
 
@@ -530,13 +632,18 @@ export default function OrdersPage() {
                               ? order.seller.avatar
                               : "/placeholder.svg"
                           }
-                          alt={"seller" in order ? order.seller.name : "N/A"}
+                          alt={
+                            "seller" in order
+                              ? order.seller.name
+                              : "Unknown Seller"
+                          }
                           fill
                           className="object-cover"
                         />
                       </div>
                       <span>
-                        Seller: {"seller" in order ? order.seller.name : "N/A"}
+                        Seller:{" "}
+                        {"seller" in order ? order.seller.name : "Unknown"}
                       </span>
                     </div>
 
@@ -624,7 +731,7 @@ export default function OrdersPage() {
 
       <Card className="mb-6 border-amber-200 dark:border-amber-800">
         <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
               <div className="flex justify-center mb-2">
                 <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-full">
@@ -666,25 +773,11 @@ export default function OrdersPage() {
                 Completed
               </div>
             </div>
-
-            <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg text-center">
-              <div className="flex justify-center mb-2">
-                <div className="p-2 bg-red-100 dark:bg-red-800 rounded-full">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-300" />
-                </div>
-              </div>
-              <div className="text-2xl font-bold text-red-700 dark:text-red-300">
-                1
-              </div>
-              <div className="text-sm text-red-600 dark:text-red-400">
-                Disputed
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
 
-      <Tabs defaultValue="all" className="mb-6">
+      <Tabs value={currentTab} onValueChange={setCurrentTab} className="mb-6">
         <TabsList className="bg-amber-100 dark:bg-amber-950/50">
           <TabsTrigger
             value="all"
@@ -710,12 +803,6 @@ export default function OrdersPage() {
           >
             Completed
           </TabsTrigger>
-          {/* <TabsTrigger
-            value="disputed"
-            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
-          >
-            Disputed
-          </TabsTrigger> */}
         </TabsList>
 
         <TabsContent value="all">
@@ -723,24 +810,6 @@ export default function OrdersPage() {
             <CardHeader className="pb-0">
               <div className="flex justify-between items-center pb-4">
                 <CardTitle>All Orders</CardTitle>
-                {/* <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                  >
-                    <Download className="h-4 w-4" />
-                    Export
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                  >
-                    <Printer className="h-4 w-4" />
-                    Print
-                  </Button>
-                </div> */}
               </div>
             </CardHeader>
             <CardContent>
@@ -800,7 +869,7 @@ export default function OrdersPage() {
                                 alt={
                                   "customer" in order
                                     ? order.customer.name
-                                    : "N/A"
+                                    : "Unknown"
                                 }
                                 fill
                                 className="object-cover"
@@ -809,7 +878,7 @@ export default function OrdersPage() {
                             <span>
                               {"customer" in order
                                 ? order.customer.name
-                                : "N/A"}
+                                : "Unknown"}
                             </span>
                           </div>
                         </td>
@@ -835,6 +904,7 @@ export default function OrdersPage() {
                               variant="outline"
                               size="sm"
                               className="border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+                              onClick={() => openOrderDetails(order)}
                             >
                               Details
                             </Button>
@@ -842,6 +912,7 @@ export default function OrdersPage() {
                               <Button
                                 size="sm"
                                 className="bg-amber-600 hover:bg-amber-700 text-white"
+                                onClick={() => openProcessOrder(order)}
                               >
                                 Process
                               </Button>
@@ -882,11 +953,13 @@ export default function OrdersPage() {
                               Placed on {order.date.toLocaleDateString()}
                             </p>
                           </div>
+
                           <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
                               className="gap-1 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                              onClick={() => openContactBuyer(order)}
                             >
                               <MessageSquare className="h-4 w-4" />
                               <span className="hidden sm:inline">
@@ -896,10 +969,15 @@ export default function OrdersPage() {
                             <Button
                               size="sm"
                               className="bg-amber-600 hover:bg-amber-700 text-white"
+                              onClick={() => openProcessOrder(order)}
                             >
                               Process Order
                             </Button>
                           </div>
+                        </div>
+
+                        <div className="p-4">
+                          <TransactionTracker status={order.status} />
                         </div>
 
                         <div className="p-4 border-t">
@@ -914,7 +992,7 @@ export default function OrdersPage() {
                                 alt={
                                   "customer" in order
                                     ? order.customer.name
-                                    : "N/A"
+                                    : "Unknown"
                                 }
                                 fill
                                 className="object-cover"
@@ -925,7 +1003,7 @@ export default function OrdersPage() {
                                 Customer:{" "}
                                 {"customer" in order
                                   ? order.customer.name
-                                  : "N/A"}
+                                  : "Unknown"}
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {"customer" in order
@@ -1019,24 +1097,17 @@ export default function OrdersPage() {
                               Placed on {order.date.toLocaleDateString()}
                             </p>
                           </div>
-                          {/* <div className="flex gap-2">
+                          <div className="flex gap-2">
                             <Button
                               variant="outline"
                               size="sm"
-                              className="gap-1 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                              className="border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+                              onClick={() => openOrderDetails(order)}
                             >
-                              <Truck className="h-4 w-4" />
-                              <span className="hidden sm:inline">
-                                Update Tracking
-                              </span>
+                              <Package className="h-4 w-4 mr-1" />
+                              Details
                             </Button>
-                            <Button
-                              size="sm"
-                              className="bg-green-600 hover:bg-green-700 text-white"
-                            >
-                              Mark Delivered
-                            </Button>
-                          </div> */}
+                          </div>
                         </div>
 
                         <div className="p-4">
@@ -1055,7 +1126,7 @@ export default function OrdersPage() {
                                 alt={
                                   "customer" in order
                                     ? order.customer.name
-                                    : "N/A"
+                                    : "Unknown"
                                 }
                                 fill
                                 className="object-cover"
@@ -1066,7 +1137,7 @@ export default function OrdersPage() {
                                 Customer:{" "}
                                 {"customer" in order
                                   ? order.customer.name
-                                  : "N/A"}
+                                  : "Unknown"}
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {"customer" in order
@@ -1155,13 +1226,16 @@ export default function OrdersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            className="gap-1 border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+                            className="border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+                            onClick={() => openOrderDetails(order)}
                           >
-                            <Download className="h-4 w-4" />
-                            <span className="hidden sm:inline">
-                              Download Invoice
-                            </span>
+                            <Package className="h-4 w-4 mr-1" />
+                            Details
                           </Button>
+                        </div>
+
+                        <div className="p-4">
+                          <TransactionTracker status={order.status} />
                         </div>
 
                         <div className="p-4 border-t">
@@ -1176,7 +1250,7 @@ export default function OrdersPage() {
                                 alt={
                                   "customer" in order
                                     ? order.customer.name
-                                    : "N/A"
+                                    : "Unknown"
                                 }
                                 fill
                                 className="object-cover"
@@ -1187,7 +1261,7 @@ export default function OrdersPage() {
                                 Customer:{" "}
                                 {"customer" in order
                                   ? order.customer.name
-                                  : "N/A"}
+                                  : "Unknown"}
                               </div>
                               <div className="text-sm text-muted-foreground">
                                 {"customer" in order
@@ -1247,6 +1321,363 @@ export default function OrdersPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <Dialog
+          open={orderDetailsModalOpen}
+          onOpenChange={setOrderDetailsModalOpen}
+        >
+          <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <Package className="h-5 w-5 text-amber-600" />
+                Order Details #{selectedOrder.id}
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-6">
+              {/* Order Status Tracker */}
+              <div className="p-4 border rounded-md">
+                <h3 className="font-medium mb-4">Order Status</h3>
+                <TransactionTracker status={selectedOrder.status} />
+              </div>
+
+              {/* Customer Information */}
+              <div className="p-4 border rounded-md">
+                <h3 className="font-medium mb-2">Customer Information</h3>
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="relative w-10 h-10 rounded-full overflow-hidden">
+                    <Image
+                      src={selectedOrder.customer.avatar || "/placeholder.svg"}
+                      alt={selectedOrder.customer.name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <div>
+                    <p className="font-medium">{selectedOrder.customer.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedOrder.customer.address}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Items */}
+              <div className="p-4 border rounded-md">
+                <h3 className="font-medium mb-2">Order Items</h3>
+                <div className="space-y-4">
+                  {selectedOrder.items.map((item: any) => (
+                    <div key={item.id} className="flex gap-4">
+                      <div className="relative w-16 h-16 rounded overflow-hidden flex-shrink-0">
+                        <Image
+                          src={item.image || "/placeholder.svg"}
+                          alt={item.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="font-medium">{item.title}</h4>
+                        <div className="flex justify-between mt-1">
+                          <span className="text-sm text-muted-foreground">
+                            ${item.price.toFixed(2)} × {item.quantity}
+                          </span>
+                          <span className="font-medium">
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Separator className="my-4" />
+
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <span>Subtotal</span>
+                    <span>${(selectedOrder.total - 5).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Shipping</span>
+                    <span>$5.00</span>
+                  </div>
+                  <div className="flex justify-between font-bold text-green-700 dark:text-green-400">
+                    <span>Total</span>
+                    <span>${selectedOrder.total.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Order Timeline */}
+              <div className="p-4 border rounded-md">
+                <h3 className="font-medium mb-2">Order Timeline</h3>
+                <div className="space-y-4">
+                  <div className="flex gap-3">
+                    <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                      <CheckCircle className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="font-medium">Order Placed</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedOrder.date.toLocaleDateString()} at{" "}
+                        {selectedOrder.date.toLocaleTimeString()}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedOrder.status === "in_delivery" ||
+                  selectedOrder.status === "completed" ? (
+                    <div className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                        <Truck className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Order Shipped</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(
+                            selectedOrder.date.getTime() + 86400000
+                          ).toLocaleDateString()}{" "}
+                          at{" "}
+                          {new Date(
+                            selectedOrder.date.getTime() + 86400000
+                          ).toLocaleTimeString()}
+                        </p>
+                        <p className="text-sm">Tracking: FDX123456789</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {selectedOrder.status === "completed" ? (
+                    <div className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center text-green-600 dark:text-green-400">
+                        <CheckCircle className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="font-medium">Order Delivered</p>
+                        <p className="text-sm text-muted-foreground">
+                          {new Date(
+                            selectedOrder.date.getTime() + 432000000
+                          ).toLocaleDateString()}{" "}
+                          at{" "}
+                          {new Date(
+                            selectedOrder.date.getTime() + 432000000
+                          ).toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="flex gap-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => setOrderDetailsModalOpen(false)}
+              >
+                Close
+              </Button>
+              {selectedOrder.status === "payment_escrowed" && (
+                <Button
+                  onClick={() => {
+                    setOrderDetailsModalOpen(false);
+                    openProcessOrder(selectedOrder);
+                  }}
+                  className="bg-amber-600 hover:bg-amber-700 text-white"
+                >
+                  Process Order
+                </Button>
+              )}
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Process Order Modal */}
+      {selectedOrder && (
+        <Dialog
+          open={processOrderModalOpen}
+          onOpenChange={setProcessOrderModalOpen}
+        >
+          <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <Truck className="h-5 w-5 text-amber-600" />
+                Process Order #{selectedOrder.id}
+              </DialogTitle>
+              <DialogDescription>
+                Enter shipping details to process this order
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden">
+                  <Image
+                    src={selectedOrder.customer.avatar || "/placeholder.svg"}
+                    alt={selectedOrder.customer.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div>
+                  <p className="font-medium">{selectedOrder.customer.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedOrder.customer.address}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-md">
+                <p className="text-sm text-amber-800 dark:text-amber-300">
+                  This order will be marked as shipped and the buyer will be
+                  notified with the tracking information.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="carrier">Shipping Carrier</Label>
+                <Select
+                  value={shippingCarrier}
+                  onValueChange={setShippingCarrier}
+                >
+                  <SelectTrigger className="border-amber-200 dark:border-amber-800">
+                    <SelectValue placeholder="Select carrier" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FedEx">FedEx</SelectItem>
+                    <SelectItem value="UPS">UPS</SelectItem>
+                    <SelectItem value="USPS">USPS</SelectItem>
+                    <SelectItem value="DHL">DHL</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="tracking">Tracking Number</Label>
+                <Input
+                  id="tracking"
+                  value={trackingNumber}
+                  onChange={(e) => setTrackingNumber(e.target.value)}
+                  placeholder="Enter tracking number"
+                  className="border-amber-200 dark:border-amber-800"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="notes">Additional Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Add any special instructions or notes"
+                  className="border-amber-200 dark:border-amber-800"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setProcessOrderModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleProcessOrder}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                disabled={!trackingNumber}
+              >
+                <Truck className="h-4 w-4 mr-2" />
+                Ship Order
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Contact Buyer Modal */}
+      {selectedOrder && (
+        <Dialog
+          open={contactBuyerModalOpen}
+          onOpenChange={setContactBuyerModalOpen}
+        >
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-amber-600" />
+                Contact Buyer
+              </DialogTitle>
+              <DialogDescription>
+                Send a message to {selectedOrder.customer.name} about order #
+                {selectedOrder.id}
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4 py-4">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="relative w-12 h-12 rounded-full overflow-hidden">
+                  <Image
+                    src={selectedOrder.customer.avatar || "/placeholder.svg"}
+                    alt={selectedOrder.customer.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+                <div>
+                  <p className="font-medium">{selectedOrder.customer.name}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Order #{selectedOrder.id}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 bg-muted rounded-md">
+                <h4 className="text-sm font-medium mb-2">Order Summary</h4>
+                <ScrollArea className="h-24">
+                  <ul className="text-sm space-y-1">
+                    {selectedOrder.items.map((item: any) => (
+                      <li key={item.id}>
+                        {item.title} × {item.quantity} - $
+                        {(item.price * item.quantity).toFixed(2)}
+                      </li>
+                    ))}
+                  </ul>
+                </ScrollArea>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="message">Message</Label>
+                <Textarea
+                  id="message"
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  placeholder="Type your message here..."
+                  className="border-amber-200 dark:border-amber-800 min-h-[120px]"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setContactBuyerModalOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendMessage}
+                className="bg-amber-600 hover:bg-amber-700 text-white"
+                disabled={!messageText.trim()}
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Send Message
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
     </>
   );
 
