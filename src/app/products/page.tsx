@@ -28,7 +28,6 @@ import {
   Leaf,
   Plus,
   Search,
-  Filter,
   Edit,
   Trash2,
   Eye,
@@ -167,14 +166,6 @@ export default function ProductsPage() {
                 Search
               </Button>
             </form>
-
-            <Button
-              variant="outline"
-              className="gap-2 border-amber-200 dark:border-amber-800"
-            >
-              <Filter className="h-4 w-4" />
-              Filter
-            </Button>
           </div>
 
           <TabsContent value="all" className="mt-0">
