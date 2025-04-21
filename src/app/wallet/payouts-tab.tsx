@@ -11,7 +11,24 @@ import {
   CheckCircle,
   RefreshCw,
   Wallet,
+  ArrowUpDown,
 } from "lucide-react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/src/components/ui/tabs";
+import { SalesReportModal } from "@/src/components/wallet/sales-report-modal";
+import { PendingPayoutsModal } from "@/src/components/wallet/pending-payouts-modal";
+import { TransactionDetailsModal } from "@/src/components/wallet/transaction-details-modal";
+import { Input } from "@/src/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+} from "@/src/components/ui/select";
 
 // Mock data for the payments
 const mockPayments = [
@@ -29,13 +46,6 @@ const mockPayments = [
     date: new Date(Date.now() - 86400000),
     status: "claimed" as const,
   },
-  {
-    orderId: "12347",
-    txId: "lsk5r4e3w2q1a2s3d4f5g6h7j8k9l0p1o2i3u4y",
-    amount: 45.0,
-    date: new Date(Date.now() - 172800000),
-    status: "pending" as const,
-  },
 ];
 
 export default function PayoutsTab() {
@@ -44,6 +54,14 @@ export default function PayoutsTab() {
   const [selectedPayment, setSelectedPayment] = useState<
     (typeof mockPayments)[0] | null
   >(null);
+  const [salesReportModalOpen, setSalesReportModalOpen] = useState(false);
+  const [pendingPayoutsModalOpen, setPendingPayoutsModalOpen] = useState(false);
+  const [transactionDetailsModalOpen, setTransactionDetailsModalOpen] =
+    useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState("date");
 
   const handleOpenClaimModal = (payment: (typeof mockPayments)[0]) => {
     setSelectedPayment(payment);
@@ -69,23 +87,31 @@ export default function PayoutsTab() {
     });
   };
 
-  // Calculate summary metrics
-  const availableTotal = payments
-    .filter((p) => p.status === "available")
-    .reduce((sum, p) => sum + p.amount, 0);
+  const handleViewTransaction = (payment: (typeof mockPayments)[0]) => {
+    setSelectedTransaction({
+      id: payment.txId,
+      type: payment.status === "claimed" ? "claim" : "incoming",
+      amount: payment.amount,
+      timestamp: payment.date,
+      status: "completed",
+      orderId: payment.orderId,
+      description: `Payment for order #${payment.orderId}`,
+      fee: payment.status === "claimed" ? payment.amount * 0.05 : 0, // 5% fee for claimed payments
+    });
+    setTransactionDetailsModalOpen(true);
+  };
 
-  const pendingTotal = payments
-    .filter((p) => p.status === "pending")
-    .reduce((sum, p) => sum + p.amount, 0);
+  const filterPayments = () => {
+    if (activeTab === "all") return payments;
+    return payments.filter((payment) => payment.status === activeTab);
+  };
 
-  const claimedTotal = payments
-    .filter((p) => p.status === "claimed")
-    .reduce((sum, p) => sum + p.amount, 0);
+  const filteredPayments = filterPayments();
 
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
+        {/* <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
           <CardContent className="p-4 flex justify-between items-center">
             <div>
               <p className="text-sm font-medium text-green-800 dark:text-green-300">
@@ -141,10 +167,10 @@ export default function PayoutsTab() {
               <CheckCircle className="h-6 w-6 text-blue-700 dark:text-blue-300" />
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-lg font-medium flex items-center gap-2">
           <Wallet className="h-5 w-5 text-amber-600" />
           Payment History
@@ -155,55 +181,80 @@ export default function PayoutsTab() {
         </Button>
       </div>
 
-      <div className="space-y-4">
-        {payments
-          .filter((p) => p.status === "available")
-          .map((payment) => (
-            <PaymentClaimCard
-              key={payment.orderId}
-              orderId={payment.orderId}
-              txId={payment.txId}
-              amount={payment.amount}
-              date={payment.date}
-              status={payment.status}
-              onClaim={() => handleOpenClaimModal(payment)}
-            />
-          ))}
-
-        {payments
-          .filter((p) => p.status === "pending")
-          .map((payment) => (
-            <PaymentClaimCard
-              key={payment.orderId}
-              orderId={payment.orderId}
-              txId={payment.txId}
-              amount={payment.amount}
-              date={payment.date}
-              status={payment.status}
-            />
-          ))}
-
-        {payments
-          .filter((p) => p.status === "claimed")
-          .map((payment) => (
-            <PaymentClaimCard
-              key={payment.orderId}
-              orderId={payment.orderId}
-              txId={payment.txId}
-              amount={payment.amount}
-              date={payment.date}
-              status={payment.status}
-            />
-          ))}
-
-        {payments.length === 0 && (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <p className="text-muted-foreground">No payments found</p>
-            </CardContent>
-          </Card>
-        )}
+      <div className="flex flex-col sm:flex-row gap-4 mb-4">
+        <Input
+          placeholder="Search by order ID or transaction ID"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="flex-1"
+        />
       </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="bg-amber-100 dark:bg-amber-950/50">
+          <TabsTrigger
+            value="all"
+            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+          >
+            All Payments
+          </TabsTrigger>
+          <TabsTrigger
+            value="available"
+            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+          >
+            Available
+          </TabsTrigger>
+          <TabsTrigger
+            value="claimed"
+            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+          >
+            Claimed
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value={activeTab} className="space-y-4 mt-4">
+          {filteredPayments
+            .filter(
+              (p) =>
+                p.orderId.includes(searchQuery) ||
+                p.txId.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+            .sort((a, b) => {
+              if (sortBy === "date") {
+                return b.date.getTime() - a.date.getTime();
+              } else if (sortBy === "amount") {
+                return b.amount - a.amount;
+              } else if (sortBy === "orderId") {
+                return a.orderId.localeCompare(b.orderId);
+              }
+              return 0;
+            })
+            .map((payment) => (
+              <PaymentClaimCard
+                key={payment.orderId}
+                orderId={payment.orderId}
+                txId={payment.txId}
+                amount={payment.amount}
+                date={payment.date}
+                status={payment.status}
+                onClaim={
+                  payment.status === "available"
+                    ? () => handleOpenClaimModal(payment)
+                    : undefined
+                }
+                onViewTransaction={() => handleViewTransaction(payment)}
+              />
+            ))}
+
+          {filteredPayments.length === 0 && (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <p className="text-muted-foreground">No payments found</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       {selectedPayment && (
         <PaymentClaimModal
@@ -213,6 +264,25 @@ export default function PayoutsTab() {
           txId={selectedPayment.txId}
           amount={selectedPayment.amount}
           onClaim={handleClaimPayment}
+          showCommissionNotice={true}
+        />
+      )}
+
+      <SalesReportModal
+        open={salesReportModalOpen}
+        onOpenChange={setSalesReportModalOpen}
+      />
+
+      <PendingPayoutsModal
+        open={pendingPayoutsModalOpen}
+        onOpenChange={setPendingPayoutsModalOpen}
+      />
+
+      {selectedTransaction && (
+        <TransactionDetailsModal
+          open={transactionDetailsModalOpen}
+          onOpenChange={setTransactionDetailsModalOpen}
+          transaction={selectedTransaction}
         />
       )}
     </div>

@@ -27,6 +27,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
     // Check localStorage for saved role and wallet on mount
@@ -41,6 +42,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       setWalletAddress(savedWallet);
       setIsConnected(true);
     }
+
+    setIsInitialized(true);
   }, []);
 
   const handleSetRole = (newRole: UserRole) => {
@@ -52,8 +55,14 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("userRole");
       setWalletAddress(null);
       setIsConnected(false);
+      localStorage.removeItem("userProfile");
     }
   };
+
+  // Don't render children until we've initialized from localStorage
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <UserRoleContext.Provider

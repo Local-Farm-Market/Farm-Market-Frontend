@@ -23,6 +23,11 @@ import { ProtectedRoute } from "@/src/components/auth/protected-route";
 import { useUserRole } from "@/src/hooks/use-user-role";
 import PayoutsTab from "@/src/app/wallet/payouts-tab";
 
+// Add the imports for the new modals
+import { SalesReportModal } from "@/src/components/wallet/sales-report-modal";
+import { PendingPayoutsModal } from "@/src/components/wallet/pending-payouts-modal";
+import { TransactionDetailsModal } from "@/src/components/wallet/transaction-details-modal";
+
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -37,7 +42,6 @@ import {
   DollarSign,
   BarChart3,
   ShoppingCart,
-  Leaf,
   Store,
   Plus,
 } from "lucide-react";
@@ -484,319 +488,219 @@ export default function WalletPage() {
   );
 
   // Seller-specific wallet UI
-  const SellerWallet = () => (
-    <>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-green-800 dark:text-green-300 flex items-center">
-              <DollarSign className="h-4 w-4 mr-2 text-green-600" />
-              Available Balance
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-900 dark:text-green-200">
-              ${balance.toFixed(2)}
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4 gap-2 border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
-              onClick={() => setBalance(balance + 10)}
-            >
-              <RefreshCw className="h-4 w-4" />
-              Refresh
-            </Button>
-          </CardContent>
-        </Card>
+  const SellerWallet = () => {
+    // Inside the SellerWallet component, add state for the modals
+    const [salesReportModalOpen, setSalesReportModalOpen] = useState(false);
+    const [pendingPayoutsModalOpen, setPendingPayoutsModalOpen] =
+      useState(false);
+    const [transactionDetailsModalOpen, setTransactionDetailsModalOpen] =
+      useState(false);
+    const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
 
-        <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-amber-800 dark:text-amber-300 flex items-center">
-              <BarChart3 className="h-4 w-4 mr-2 text-amber-600" />
-              Sales Revenue
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-900 dark:text-amber-200">
-              $1,245.50
-            </div>
-            <div className="text-xs text-amber-700 dark:text-amber-400 flex items-center mt-1">
-              <ArrowUpRight className="h-3 w-3 mr-1" /> +15% from last month
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
-            >
-              View Sales Report
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center">
-              <Store className="h-4 w-4 mr-2 text-blue-600" />
-              Pending Payouts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">
-              $345.00
-            </div>
-            <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-              3 orders in escrow
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="mt-4 w-full border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
-            >
-              View Pending Orders
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="transactions">
-        <TabsList className="mb-6 bg-amber-100 dark:bg-amber-950/50">
-          <TabsTrigger
-            value="transactions"
-            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
-          >
-            Transactions
-          </TabsTrigger>
-          <TabsTrigger
-            value="sales"
-            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
-          >
-            Sales
-          </TabsTrigger>
-          <TabsTrigger
-            value="payouts"
-            className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
-          >
-            Payouts
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="transactions">
-          <Card>
+    return (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <Card className="bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-900">
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center">
-                <ArrowUpRight className="h-5 w-5 mr-2 text-amber-600" />
-                Transaction History
+              <CardTitle className="text-sm font-medium text-green-800 dark:text-green-300 flex items-center">
+                <DollarSign className="h-4 w-4 mr-2 text-green-600" />
+                Available Balance
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {transactions.length > 0 ? (
-                <div className="space-y-4">
-                  {transactions.map((transaction) => (
-                    <div
-                      key={transaction.id}
-                      className="flex items-center justify-between p-3 border rounded-md border-amber-100 dark:border-amber-900/50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`p-2 rounded-full ${
-                            transaction.type === "incoming"
-                              ? "bg-green-100 dark:bg-green-900/30"
-                              : "bg-amber-100 dark:bg-amber-900/30"
-                          }`}
-                        >
-                          {transaction.type === "incoming" ? (
-                            <ArrowDownLeft
-                              className={`h-4 w-4 ${
-                                transaction.type === "incoming"
-                                  ? "text-green-600 dark:text-green-400"
-                                  : "text-amber-600 dark:text-amber-400"
-                              }`}
-                            />
-                          ) : (
-                            <ArrowUpRight
-                              className={`h-4 w-4 ${
-                                transaction.type === "incoming"
-                                  ? "text-green-600 dark:text-green-400"
-                                  : "text-amber-600 dark:text-amber-400"
-                              }`}
-                            />
-                          )}
-                        </div>
-                        <div>
-                          <div className="font-medium">
-                            {transaction.type === "incoming"
-                              ? "Received"
-                              : "Sent"}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {transaction.timestamp.toLocaleString()}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="text-right">
+              <div className="text-3xl font-bold text-green-900 dark:text-green-200">
+                ${balance.toFixed(2)}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 gap-2 border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+                onClick={() => setBalance(balance + 10)}
+              >
+                <RefreshCw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-900">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-amber-800 dark:text-amber-300 flex items-center">
+                <BarChart3 className="h-4 w-4 mr-2 text-amber-600" />
+                Sales Revenue
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-amber-900 dark:text-amber-200">
+                $1,245.50
+              </div>
+              {/* <div className="text-xs text-amber-700 dark:text-amber-400 flex items-center mt-1">
+                <ArrowUpRight className="h-3 w-3 mr-1" /> +15% from last month
+              </div> */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                onClick={() => setSalesReportModalOpen(true)}
+              >
+                View Sales Report
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-900">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-blue-800 dark:text-blue-300 flex items-center">
+                <Store className="h-4 w-4 mr-2 text-blue-600" />
+                Pending Payouts
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">
+                $345.00
+              </div>
+              {/* <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">
+                3 orders in escrow
+              </div> */}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-4 w-full border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/30"
+                onClick={() => setPendingPayoutsModalOpen(true)}
+              >
+                View Pending Orders
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Tabs defaultValue="transactions">
+          <TabsList className="mb-6 bg-amber-100 dark:bg-amber-950/50">
+            <TabsTrigger
+              value="transactions"
+              className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+            >
+              Transactions
+            </TabsTrigger>
+            <TabsTrigger
+              value="payouts"
+              className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+            >
+              Payouts
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="transactions">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center">
+                  <ArrowUpRight className="h-5 w-5 mr-2 text-amber-600" />
+                  Transaction History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {transactions.length > 0 ? (
+                  <div className="space-y-4">
+                    {transactions.map((transaction) => (
+                      <div
+                        key={transaction.id}
+                        className="flex items-center justify-between p-3 border rounded-md border-amber-100 dark:border-amber-900/50"
+                      >
+                        <div className="flex items-center gap-3">
                           <div
-                            className={`font-medium ${
+                            className={`p-2 rounded-full ${
                               transaction.type === "incoming"
-                                ? "text-green-600 dark:text-green-400"
-                                : "text-amber-600 dark:text-amber-400"
+                                ? "bg-green-100 dark:bg-green-900/30"
+                                : "bg-amber-100 dark:bg-amber-900/30"
                             }`}
                           >
-                            {transaction.type === "incoming" ? "+" : "-"}$
-                            {transaction.amount.toFixed(2)}
+                            {transaction.type === "incoming" ? (
+                              <ArrowDownLeft
+                                className={`h-4 w-4 ${
+                                  transaction.type === "incoming"
+                                    ? "text-green-600 dark:text-green-400"
+                                    : "text-amber-600 dark:text-amber-400"
+                                }`}
+                              />
+                            ) : (
+                              <ArrowUpRight
+                                className={`h-4 w-4 ${
+                                  transaction.type === "incoming"
+                                    ? "text-green-600 dark:text-green-400"
+                                    : "text-amber-600 dark:text-amber-400"
+                                }`}
+                              />
+                            )}
                           </div>
-                          <div className="text-xs text-muted-foreground truncate max-w-[150px]">
-                            {transaction.description}
+                          <div>
+                            <div className="font-medium">
+                              {transaction.type === "incoming"
+                                ? "Received"
+                                : "Sent"}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              {transaction.timestamp.toLocaleString()}
+                            </div>
                           </div>
                         </div>
-                        {getStatusIcon(transaction.status)}
+                        <div className="flex items-center gap-2">
+                          <div className="text-right">
+                            <div
+                              className={`font-medium ${
+                                transaction.type === "incoming"
+                                  ? "text-green-600 dark:text-green-400"
+                                  : "text-amber-600 dark:text-amber-400"
+                              }`}
+                            >
+                              {transaction.type === "incoming" ? "+" : "-"}$
+                              {transaction.amount.toFixed(2)}
+                            </div>
+                            <div className="text-xs text-muted-foreground truncate max-w-[150px]">
+                              {transaction.description}
+                            </div>
+                          </div>
+                          {getStatusIcon(transaction.status)}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-muted-foreground">
-                    No transactions found.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="sales">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Store className="h-5 w-5 mr-2 text-green-600" />
-                Sales Overview
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                    <div className="text-sm text-green-800 dark:text-green-300">
-                      Today
-                    </div>
-                    <div className="text-2xl font-bold text-green-900 dark:text-green-200">
-                      $145.00
-                    </div>
-                    <div className="text-xs text-green-700 dark:text-green-400 mt-1">
-                      3 orders
-                    </div>
+                    ))}
                   </div>
-                  <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-                    <div className="text-sm text-amber-800 dark:text-amber-300">
-                      This Week
-                    </div>
-                    <div className="text-2xl font-bold text-amber-900 dark:text-amber-200">
-                      $845.75
-                    </div>
-                    <div className="text-xs text-amber-700 dark:text-amber-400 mt-1">
-                      12 orders
-                    </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">
+                      No transactions found.
+                    </p>
                   </div>
-                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
-                    <div className="text-sm text-blue-800 dark:text-blue-300">
-                      This Month
-                    </div>
-                    <div className="text-2xl font-bold text-blue-900 dark:text-blue-200">
-                      $2,450.50
-                    </div>
-                    <div className="text-xs text-blue-700 dark:text-blue-400 mt-1">
-                      32 orders
-                    </div>
-                  </div>
-                </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                <div>
-                  <h3 className="text-lg font-medium mb-4">
-                    Top Selling Products
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center p-3 border rounded-md border-amber-100 dark:border-amber-900/50">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
-                          <Leaf className="h-4 w-4 text-green-600 dark:text-green-400" />
-                        </div>
-                        <div>
-                          <div className="font-medium">Organic Tomatoes</div>
-                          <div className="text-xs text-muted-foreground">
-                            120 units sold
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-green-600 dark:text-green-400">
-                          $478.80
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          $3.99 per unit
-                        </div>
-                      </div>
-                    </div>
+          <TabsContent value="payouts">
+            <PayoutsTab />
+          </TabsContent>
+        </Tabs>
 
-                    <div className="flex justify-between items-center p-3 border rounded-md border-amber-100 dark:border-amber-900/50">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-full">
-                          <Leaf className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                        </div>
-                        <div>
-                          <div className="font-medium">Grass-Fed Beef</div>
-                          <div className="text-xs text-muted-foreground">
-                            35 units sold
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-green-600 dark:text-green-400">
-                          $454.65
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          $12.99 per unit
-                        </div>
-                      </div>
-                    </div>
+        {/* Add the modals at the end of the SellerWallet component */}
+        <SalesReportModal
+          open={salesReportModalOpen}
+          onOpenChange={setSalesReportModalOpen}
+        />
 
-                    <div className="flex justify-between items-center p-3 border rounded-md border-amber-100 dark:border-amber-900/50">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                          <Leaf className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                        </div>
-                        <div>
-                          <div className="font-medium">
-                            Organic Free-Range Eggs
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            80 units sold
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-medium text-green-600 dark:text-green-400">
-                          $439.20
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          $5.49 per unit
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        <PendingPayoutsModal
+          open={pendingPayoutsModalOpen}
+          onOpenChange={setPendingPayoutsModalOpen}
+        />
 
-        <TabsContent value="payouts">
-          <PayoutsTab />
-        </TabsContent>
-      </Tabs>
-    </>
-  );
+        {selectedTransaction && (
+          <TransactionDetailsModal
+            open={transactionDetailsModalOpen}
+            onOpenChange={setTransactionDetailsModalOpen}
+            transaction={selectedTransaction}
+          />
+        )}
+      </>
+    );
+  };
 
   return (
     <ProtectedRoute requireAuth={true}>

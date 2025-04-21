@@ -40,7 +40,6 @@ import {
   Shield,
   Camera,
   Star,
-  MapPin,
   Calendar,
   Leaf,
   Heart,
@@ -55,6 +54,8 @@ import {
   ArrowUpRight,
   Package,
   CheckCircle,
+  MapPin,
+  Mail,
 } from "lucide-react";
 
 // Mock buyer user data
@@ -84,6 +85,7 @@ const mockBuyerUser = {
       },
     ],
   },
+  walletAddress: "lsk7h3kquly4s5cgh8bj2j9yqtbdgz4venhmgkx4",
 };
 
 // Mock seller user data
@@ -131,19 +133,58 @@ const mockSellerUser = {
       available: false,
     },
   ],
+  walletAddress: "lsk7h3kquly4s5cgh8bj2j9yqtbdgz4venhmgkx4",
 };
 
 export default function ProfilePage() {
   const { role, setRole } = useUserRole();
-  const [user, setUser] = useState(
-    role === "seller" ? mockSellerUser : mockBuyerUser
-  );
+  const [user, setUser] = useState(() => {
+    // Try to load profile data from localStorage
+    const savedProfile =
+      typeof window !== "undefined"
+        ? localStorage.getItem("userProfile")
+        : null;
+    const profileData = savedProfile ? JSON.parse(savedProfile) : {};
+
+    // Filter out empty values
+    const cleanedProfileData = Object.entries(profileData || {}).reduce(
+      (acc, [key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {}
+    );
+
+    // Merge profile data with role-specific mock data for required fields only
+    return {
+      ...(role === "seller" ? mockSellerUser : mockBuyerUser),
+      ...cleanedProfileData,
+    };
+  });
+
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
-    name: user.name,
-    email: user.email,
-    bio: user.bio,
-    location: user.location,
+    name: user.name || "",
+    email: user.email || "",
+    bio: user.bio || "",
+    location: user.location || "",
+    // For sellers
+    farmName:
+      user.farmName ||
+      (role === "seller" && user.farmDetails ? user.farmDetails.name : ""),
+    farmDescription:
+      user.farmDescription ||
+      (role === "seller" && user.farmDetails
+        ? user.farmDetails.description
+        : ""),
+    farmSize:
+      user.farmSize ||
+      (role === "seller" && user.farmDetails ? user.farmDetails.farmSize : ""),
+    organicCertified: user.organicCertified || false,
+    // For buyers
+    preferredCategories: user.preferredCategories || [],
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -161,7 +202,46 @@ export default function ProfilePage() {
   };
 
   const handleSaveProfile = () => {
-    setUser({ ...user, ...formData });
+    // Filter out empty values
+    const cleanedFormData = Object.entries(formData).reduce(
+      (acc, [key, value]) => {
+        if (value !== null && value !== undefined && value !== "") {
+          acc[key] = value;
+        }
+        return acc;
+      },
+      {}
+    );
+
+    // Create updated user object
+    const updatedUser = {
+      ...user,
+      ...cleanedFormData,
+      // Update nested properties for display if they exist
+      farmDetails:
+        role === "seller"
+          ? {
+              ...user.farmDetails,
+              ...(cleanedFormData.farmName
+                ? { name: cleanedFormData.farmName }
+                : {}),
+              ...(cleanedFormData.farmDescription
+                ? { description: cleanedFormData.farmDescription }
+                : {}),
+              ...(cleanedFormData.farmSize
+                ? { farmSize: cleanedFormData.farmSize }
+                : {}),
+            }
+          : user.farmDetails,
+    };
+
+    // Update state
+    setUser(updatedUser);
+
+    // Save to localStorage
+    localStorage.setItem("userProfile", JSON.stringify(cleanedFormData));
+
+    // Exit edit mode
     setIsEditing(false);
   };
 
@@ -172,7 +252,20 @@ export default function ProfilePage() {
     });
   };
 
-  // Buyer-specific profile UI
+  const handleCategoryToggle = (category: string) => {
+    const currentCategories = formData.preferredCategories || [];
+    let updatedCategories = [...currentCategories];
+
+    if (updatedCategories.includes(category)) {
+      updatedCategories = updatedCategories.filter((c) => c !== category);
+    } else {
+      updatedCategories.push(category);
+    }
+
+    setFormData({ ...formData, preferredCategories: updatedCategories });
+  };
+
+  // Update the BuyerProfile component to conditionally render fields
   const BuyerProfile = () => (
     <>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -182,7 +275,9 @@ export default function ProfilePage() {
               <div className="relative mb-4">
                 <Avatar className="w-24 h-24">
                   <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                  <AvatarFallback>
+                    {user.name ? user.name.charAt(0) : "U"}
+                  </AvatarFallback>
                 </Avatar>
                 <Button
                   variant="secondary"
@@ -193,43 +288,49 @@ export default function ProfilePage() {
                 </Button>
               </div>
 
-              <h2 className="text-xl font-bold text-amber-800 dark:text-amber-300">
-                {user.name}
-              </h2>
-              <p className="text-muted-foreground">{user.email}</p>
-
-              <Badge className="mt-2 bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800">
-                Verified Buyer
-              </Badge>
+              {user.name && (
+                <h2 className="text-xl font-bold text-amber-800 dark:text-amber-300">
+                  {user.name}
+                </h2>
+              )}
+              <p className="text-muted-foreground font-mono text-xs truncate max-w-[200px]">
+                {user.walletAddress ||
+                  "lsk7h3kquly4s5cgh8bj2j9yqtbdgz4venhmgkx4"}
+              </p>
 
               <div className="w-full mt-6 space-y-2">
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                  <span>{user.location}</span>
-                </div>
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                   <span>Member since {user.memberSince}</span>
                 </div>
+                {user.location && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                    <span>{user.location}</span>
+                  </div>
+                )}
               </div>
 
-              <div className="w-full mt-6">
-                <h3 className="text-sm font-medium mb-2 flex items-center">
-                  <Heart className="h-4 w-4 mr-1 text-amber-600" />
-                  Favorite Categories
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {mockBuyerUser.favoriteCategories.map((category) => (
-                    <Badge
-                      key={category}
-                      variant="outline"
-                      className="bg-amber-50 text-amber-800 hover:bg-amber-100 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800 dark:hover:bg-amber-900/50"
-                    >
-                      {category}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+              {user.preferredCategories &&
+                user.preferredCategories.length > 0 && (
+                  <div className="w-full mt-6">
+                    <h3 className="text-sm font-medium mb-2 flex items-center">
+                      <Heart className="h-4 w-4 mr-1 text-amber-600" />
+                      Favorite Categories
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {user.preferredCategories.map((category) => (
+                        <Badge
+                          key={category}
+                          variant="outline"
+                          className="bg-amber-50 text-amber-800 hover:bg-amber-100 border-amber-200 dark:bg-amber-950/30 dark:text-amber-300 dark:border-amber-800 dark:hover:bg-amber-900/50"
+                        >
+                          {category}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
             </div>
           </CardContent>
         </Card>
@@ -271,11 +372,23 @@ export default function ProfilePage() {
           <CardContent>
             {!isEditing ? (
               <div className="space-y-4">
-                <p>{user.bio}</p>
+                {user.bio ? (
+                  <p>{user.bio}</p>
+                ) : (
+                  <p className="text-muted-foreground italic">
+                    No bio information provided yet.
+                  </p>
+                )}
+                {user.email && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Mail className="h-4 w-4" />
+                    <span>{user.email}</span>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
                     <Input
@@ -297,27 +410,59 @@ export default function ProfilePage() {
                       className="border-amber-200 dark:border-amber-800"
                     />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="location">Location</Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleInputChange}
-                    className="border-amber-200 dark:border-amber-800"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="bio">Bio</Label>
-                  <Textarea
-                    id="bio"
-                    name="bio"
-                    rows={5}
-                    value={formData.bio}
-                    onChange={handleInputChange}
-                    className="border-amber-200 dark:border-amber-800"
-                  />
+                  <div className="space-y-2">
+                    <Label htmlFor="location">Location</Label>
+                    <Input
+                      id="location"
+                      name="location"
+                      value={formData.location}
+                      onChange={handleInputChange}
+                      className="border-amber-200 dark:border-amber-800"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea
+                      id="bio"
+                      name="bio"
+                      rows={5}
+                      value={formData.bio}
+                      onChange={handleInputChange}
+                      className="border-amber-200 dark:border-amber-800"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Preferred Categories</Label>
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pt-2">
+                      {[
+                        "Vegetables",
+                        "Fruits",
+                        "Dairy",
+                        "Meat",
+                        "Poultry",
+                        "Grains",
+                        "Organic",
+                      ].map((category) => (
+                        <div
+                          key={category}
+                          className="flex items-center space-x-2"
+                        >
+                          <Switch
+                            id={`category-${category}`}
+                            checked={(
+                              formData.preferredCategories || []
+                            ).includes(category)}
+                            onCheckedChange={() =>
+                              handleCategoryToggle(category)
+                            }
+                          />
+                          <Label htmlFor={`category-${category}`}>
+                            {category}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -435,7 +580,7 @@ export default function ProfilePage() {
     </>
   );
 
-  // Seller-specific profile UI
+  // Update the SellerProfile component to conditionally render fields
   const SellerProfile = () => {
     const [reviewsModalOpen, setReviewsModalOpen] = useState(false);
 
@@ -448,7 +593,9 @@ export default function ProfilePage() {
                 <div className="relative mb-4">
                   <Avatar className="w-24 h-24">
                     <AvatarImage src={user.avatar} alt={user.name} />
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                    <AvatarFallback>
+                      {user.name ? user.name.charAt(0) : "U"}
+                    </AvatarFallback>
                   </Avatar>
                   <Button
                     variant="secondary"
@@ -459,14 +606,15 @@ export default function ProfilePage() {
                   </Button>
                 </div>
 
-                <h2 className="text-xl font-bold text-amber-800 dark:text-amber-300">
-                  {user.name}
-                </h2>
-                <p className="text-muted-foreground">{user.email}</p>
-
-                <Badge className="mt-2 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800">
-                  Verified Seller
-                </Badge>
+                {user.name && (
+                  <h2 className="text-xl font-bold text-amber-800 dark:text-amber-300">
+                    {user.name}
+                  </h2>
+                )}
+                <p className="text-muted-foreground font-mono text-xs truncate max-w-[200px]">
+                  {user.walletAddress ||
+                    "lsk7h3kquly4s5cgh8bj2j9yqtbdgz4venhmgkx4"}
+                </p>
 
                 <div className="flex items-center mt-4">
                   <Star className="h-4 w-4 text-yellow-500 mr-1" />
@@ -478,32 +626,47 @@ export default function ProfilePage() {
 
                 <div className="w-full mt-6 space-y-2">
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                    <span>{user.location}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                     <span>Member since {user.memberSince}</span>
                   </div>
+                  {user.location && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                      <span>{user.location}</span>
+                    </div>
+                  )}
                 </div>
 
-                <div className="w-full mt-6">
-                  <h3 className="text-sm font-medium mb-2 flex items-center">
-                    <Sprout className="h-4 w-4 mr-1 text-green-600" />
-                    Farm Certifications
-                  </h3>
-                  <div className="flex flex-wrap gap-2">
-                    {mockSellerUser.farmDetails.certifications.map((cert) => (
-                      <Badge
-                        key={cert}
-                        variant="outline"
-                        className="bg-green-50 text-green-800 hover:bg-green-100 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800 dark:hover:bg-green-900/50"
-                      >
-                        {cert}
-                      </Badge>
-                    ))}
+                {(user.organicCertified ||
+                  (user.farmDetails &&
+                    user.farmDetails.certifications &&
+                    user.farmDetails.certifications.length > 0)) && (
+                  <div className="w-full mt-6">
+                    <h3 className="text-sm font-medium mb-2 flex items-center">
+                      <Sprout className="h-4 w-4 mr-1 text-green-600" />
+                      Farm Certifications
+                    </h3>
+                    <div className="flex flex-wrap gap-2">
+                      {(user.organicCertified ? ["Certified Organic"] : [])
+                        .concat(
+                          user.farmDetails && user.farmDetails.certifications
+                            ? user.farmDetails.certifications.filter(
+                                (cert) => cert !== "Certified Organic"
+                              )
+                            : []
+                        )
+                        .map((cert) => (
+                          <Badge
+                            key={cert}
+                            variant="outline"
+                            className="bg-green-50 text-green-800 hover:bg-green-100 border-green-200 dark:bg-green-950/30 dark:text-green-300 dark:border-green-800 dark:hover:bg-green-900/50"
+                          >
+                            {cert}
+                          </Badge>
+                        ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -546,30 +709,50 @@ export default function ProfilePage() {
               {!isEditing ? (
                 <div className="space-y-4">
                   <div>
-                    <h3 className="font-medium text-lg text-amber-800 dark:text-amber-300">
-                      {mockSellerUser.farmDetails.name}
-                    </h3>
-                    <p className="mt-2">{user.bio}</p>
+                    {user.farmName ? (
+                      <h3 className="font-medium text-lg text-amber-800 dark:text-amber-300">
+                        {user.farmName}
+                      </h3>
+                    ) : (
+                      <h3 className="font-medium text-lg text-amber-800/50 dark:text-amber-300/50 italic">
+                        Farm Name Not Set
+                      </h3>
+                    )}
+                    {user.bio ? (
+                      <p className="mt-2">{user.bio}</p>
+                    ) : (
+                      <p className="mt-2 text-muted-foreground italic">
+                        No bio information provided yet.
+                      </p>
+                    )}
+                    {user.email && (
+                      <div className="flex items-center gap-2 text-muted-foreground mt-2">
+                        <Mail className="h-4 w-4" />
+                        <span>{user.email}</span>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                    <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-                      <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">
-                        Farm Details
-                      </h4>
-                      <p className="text-sm">
-                        {mockSellerUser.farmDetails.description}
-                      </p>
+                  {(user.farmDescription || user.farmSize) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                      {user.farmDescription && (
+                        <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                          <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">
+                            Farm Details
+                          </h4>
+                          <p className="text-sm">{user.farmDescription}</p>
+                        </div>
+                      )}
+                      {user.farmSize && (
+                        <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                          <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
+                            Farm Size
+                          </h4>
+                          <p className="text-sm">{user.farmSize}</p>
+                        </div>
+                      )}
                     </div>
-                    <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                      <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                        Farm Size
-                      </h4>
-                      <p className="text-sm">
-                        {mockSellerUser.farmDetails.farmSize}
-                      </p>
-                    </div>
-                  </div>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -597,20 +780,31 @@ export default function ProfilePage() {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="farmName">Farm Name</Label>
-                    <Input
-                      id="farmName"
-                      name="farmName"
-                      value={mockSellerUser.farmDetails.name}
-                      className="border-amber-200 dark:border-amber-800"
-                    />
-                  </div>
-                  <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
                     <Input
                       id="location"
                       name="location"
                       value={formData.location}
+                      onChange={handleInputChange}
+                      className="border-amber-200 dark:border-amber-800"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="farmName">Farm Name</Label>
+                    <Input
+                      id="farmName"
+                      name="farmName"
+                      value={formData.farmName}
+                      onChange={handleInputChange}
+                      className="border-amber-200 dark:border-amber-800"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="farmSize">Farm Size</Label>
+                    <Input
+                      id="farmSize"
+                      name="farmSize"
+                      value={formData.farmSize}
                       onChange={handleInputChange}
                       className="border-amber-200 dark:border-amber-800"
                     />
@@ -632,9 +826,29 @@ export default function ProfilePage() {
                       id="farmDescription"
                       name="farmDescription"
                       rows={3}
-                      value={mockSellerUser.farmDetails.description}
+                      value={formData.farmDescription}
+                      onChange={handleInputChange}
                       className="border-amber-200 dark:border-amber-800"
                     />
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="organicCertified"
+                      checked={formData.organicCertified}
+                      onCheckedChange={() =>
+                        setFormData({
+                          ...formData,
+                          organicCertified: !formData.organicCertified,
+                        })
+                      }
+                    />
+                    <Label
+                      htmlFor="organicCertified"
+                      className="flex items-center gap-1"
+                    >
+                      <Leaf className="h-4 w-4 text-green-600" />
+                      Certified Organic
+                    </Label>
                   </div>
                 </div>
               )}
@@ -712,13 +926,6 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
-                    >
-                      Edit
-                    </Button>
                   </div>
                 ))}
               </div>
@@ -809,7 +1016,377 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        <div>{role === "seller" ? <SellerProfile /> : <BuyerProfile />}</div>
+        <Tabs defaultValue="profile">
+          <TabsList className="mb-6 bg-amber-100 dark:bg-amber-950/50">
+            <TabsTrigger
+              value="profile"
+              className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+            >
+              Profile
+            </TabsTrigger>
+            {role === "seller" ? (
+              <TabsTrigger
+                value="products"
+                className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+              >
+                Products
+              </TabsTrigger>
+            ) : (
+              <TabsTrigger
+                value="orders"
+                className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+              >
+                Orders
+              </TabsTrigger>
+            )}
+            <TabsTrigger
+              value="settings"
+              className="data-[state=active]:bg-amber-600 data-[state=active]:text-white"
+            >
+              Settings
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile">
+            {role === "seller" ? <SellerProfile /> : <BuyerProfile />}
+          </TabsContent>
+
+          <TabsContent value="products">
+            {role === "seller" && (
+              <div>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-xl font-bold text-amber-800 dark:text-amber-300">
+                    My Products
+                  </h2>
+                  <Button className="gap-2 bg-green-600 hover:bg-green-700 text-white">
+                    <Plus className="h-4 w-4" />
+                    Add New Product
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {mockSellerUser.products.map((product) => (
+                    <Card
+                      key={product.id}
+                      className="overflow-hidden border-amber-100 dark:border-amber-900/50"
+                    >
+                      <div className="relative aspect-video">
+                        <Image
+                          src={product.image || "/placeholder.svg"}
+                          alt={product.title}
+                          fill
+                          className="object-cover"
+                        />
+                        <Badge
+                          variant={product.available ? "default" : "secondary"}
+                          className={`absolute top-2 right-2 ${
+                            product.available
+                              ? "bg-green-500 hover:bg-green-600 text-white"
+                              : "bg-gray-500 hover:bg-gray-600 text-white"
+                          }`}
+                        >
+                          {product.available ? "Available" : "Sold Out"}
+                        </Badge>
+                      </div>
+                      <CardContent className="p-4">
+                        <h3 className="font-medium">{product.title}</h3>
+                        <p className="text-lg font-bold mt-1 text-green-700 dark:text-green-400">
+                          ${product.price.toFixed(2)}
+                        </p>
+                        <div className="flex justify-between mt-4">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                          >
+                            Edit
+                          </Button>
+                          <Button variant="destructive" size="sm">
+                            Remove
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="orders">
+            {role === "buyer" && (
+              <div>
+                <h2 className="text-xl font-bold text-amber-800 dark:text-amber-300 mb-6">
+                  My Orders
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg">
+                    <div className="flex justify-center mb-2">
+                      <div className="p-2 bg-blue-100 dark:bg-blue-800 rounded-full">
+                        <Package className="h-5 w-5 text-blue-600 dark:text-blue-300" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                        2
+                      </div>
+                      <div className="text-sm text-blue-600 dark:text-blue-400">
+                        Active Orders
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                    <div className="flex justify-center mb-2">
+                      <div className="p-2 bg-green-100 dark:bg-green-800 rounded-full">
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-300" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-700 dark:text-green-300">
+                        18
+                      </div>
+                      <div className="text-sm text-green-600 dark:text-green-400">
+                        Completed Orders
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                    <div className="flex justify-center mb-2">
+                      <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-full">
+                        <Truck className="h-5 w-5 text-amber-600 dark:text-amber-300" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-amber-700 dark:text-amber-300">
+                        1
+                      </div>
+                      <div className="text-sm text-amber-600 dark:text-amber-400">
+                        In Delivery
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <Button className="w-full mb-6 bg-amber-600 hover:bg-amber-700 text-white">
+                  View All Orders
+                </Button>
+
+                <h3 className="text-lg font-medium mb-4">Recent Orders</h3>
+                <div className="space-y-4">
+                  <div className="p-4 border rounded-md border-amber-100 dark:border-amber-900/50">
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <span className="font-medium">Order #12345</span>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          May 15, 2023
+                        </span>
+                      </div>
+                      <Badge className="bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
+                        In Progress
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 rounded overflow-hidden">
+                        <Image
+                          src="/placeholder.svg?height=200&width=200"
+                          alt="Product"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">
+                          Fresh Organic Tomatoes (x3)
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Green Valley Farm
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium text-green-700 dark:text-green-400">
+                          $23.97
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                        >
+                          Track
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 border rounded-md border-amber-100 dark:border-amber-900/50">
+                    <div className="flex justify-between items-center mb-3">
+                      <div>
+                        <span className="font-medium">Order #12346</span>
+                        <span className="text-xs text-muted-foreground ml-2">
+                          May 10, 2023
+                        </span>
+                      </div>
+                      <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
+                        Completed
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 rounded overflow-hidden">
+                        <Image
+                          src="/placeholder.svg?height=200&width=200"
+                          alt="Product"
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-medium">Grass-Fed Beef (x1)</div>
+                        <div className="text-sm text-muted-foreground">
+                          Sunset Ranch
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium text-green-700 dark:text-green-400">
+                          $12.99
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="mt-1 border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-400 dark:hover:bg-green-950/30"
+                        >
+                          Buy Again
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="md:col-span-1">
+                <Card className="border-amber-100 dark:border-amber-900/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-amber-800 dark:text-amber-300">
+                      <User className="h-5 w-5 mr-2 text-amber-600" />
+                      Account
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <nav className="space-y-2">
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                      >
+                        <User className="h-4 w-4 mr-2" />
+                        Profile Information
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                      >
+                        <Shield className="h-4 w-4 mr-2" />
+                        Security
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                      >
+                        <Bell className="h-4 w-4 mr-2" />
+                        Notifications
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className="w-full justify-start text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/30"
+                      >
+                        <Settings className="h-4 w-4 mr-2" />
+                        Preferences
+                      </Button>
+                    </nav>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div className="md:col-span-2">
+                <Card className="border-amber-100 dark:border-amber-900/50">
+                  <CardHeader>
+                    <CardTitle className="flex items-center text-amber-800 dark:text-amber-300">
+                      <Bell className="h-5 w-5 mr-2 text-amber-600" />
+                      Notification Settings
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">Order Updates</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Receive notifications about your orders
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.orderUpdates}
+                          onCheckedChange={() =>
+                            handleToggleNotification("orderUpdates")
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">Payment Notifications</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified about payments and escrow updates
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.paymentNotifications}
+                          onCheckedChange={() =>
+                            handleToggleNotification("paymentNotifications")
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">New Messages</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Receive notifications for new messages
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.newMessages}
+                          onCheckedChange={() =>
+                            handleToggleNotification("newMessages")
+                          }
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">Marketplace Updates</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Get notified about new products and promotions
+                          </p>
+                        </div>
+                        <Switch
+                          checked={notificationSettings.marketplaceUpdates}
+                          onCheckedChange={() =>
+                            handleToggleNotification("marketplaceUpdates")
+                          }
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       </div>
     </ProtectedRoute>
   );

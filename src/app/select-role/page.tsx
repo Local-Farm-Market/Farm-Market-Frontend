@@ -18,6 +18,7 @@ export default function SelectRolePage() {
     // Check if wallet is connected
     const savedWallet = localStorage.getItem("walletAddress");
     const savedRole = localStorage.getItem("userRole") as UserRole;
+    const hasProfile = localStorage.getItem("userProfile");
 
     setWalletAddress(savedWallet);
 
@@ -27,14 +28,15 @@ export default function SelectRolePage() {
       return;
     }
 
-    // If role is already selected, redirect to the selected role's home
-    if (savedRole === "buyer") {
-      router.push("/buyer-home");
+    // If role is already selected AND profile is set up, redirect to home
+    if (savedRole && hasProfile) {
+      router.push("/");
       return;
     }
 
-    if (savedRole === "seller") {
-      router.push("/seller-home");
+    // If role is selected but no profile, redirect to profile setup
+    if (savedRole && !hasProfile) {
+      router.push("/profile-setup");
       return;
     }
 
@@ -48,16 +50,8 @@ export default function SelectRolePage() {
     // Update context
     setRole(selectedRole);
 
-    // Redirect to home page
-    if (selectedRole === "buyer") {
-      router.push("/buyer-home");
-      return;
-    }
-
-    if (selectedRole === "seller") {
-      router.push("/seller-home");
-      return;
-    }
+    // Redirect to profile setup page
+    router.push("/profile-setup");
   };
 
   const goBack = () => {

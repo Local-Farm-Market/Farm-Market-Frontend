@@ -93,6 +93,8 @@ export default function ProductsPage() {
   };
 
   const getStatusBadge = (status: string) => {
+    if (!status) return <Badge variant="outline">Unknown</Badge>;
+
     switch (status) {
       case "active":
         return (

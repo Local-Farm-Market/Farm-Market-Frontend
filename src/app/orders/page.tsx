@@ -31,11 +31,8 @@ import {
   Truck,
   CheckCircle,
   Search,
-  Filter,
   ArrowUpDown,
   Leaf,
-  Download,
-  Printer,
 } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
@@ -441,14 +438,6 @@ export default function OrdersPage() {
             Search
           </Button>
         </form>
-
-        <Button
-          variant="outline"
-          className="gap-2 border-amber-200 dark:border-amber-800"
-        >
-          <Filter className="h-4 w-4" />
-          Filter
-        </Button>
       </div>
 
       <Tabs defaultValue="active" className="mb-6">
@@ -719,14 +708,6 @@ export default function OrdersPage() {
             Search
           </Button>
         </form>
-
-        <Button
-          variant="outline"
-          className="gap-2 border-amber-200 dark:border-amber-800"
-        >
-          <Filter className="h-4 w-4" />
-          Filter
-        </Button>
       </div>
 
       <Card className="mb-6 border-amber-200 dark:border-amber-800">

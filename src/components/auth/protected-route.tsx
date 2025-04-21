@@ -1,13 +1,11 @@
 "use client";
 
-import type React from "react";
-
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useUserRole } from "@/src/hooks/use-user-role";
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
   requireAuth?: boolean;
   requireRole?: "buyer" | "seller";
 }
@@ -19,17 +17,20 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { role } = useUserRole();
-  const [isLoading, setIsLoading] = useState(true);
+  const { role, isConnected } = useUserRole();
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check if wallet is connected
-    const walletAddress = localStorage.getItem("walletAddress");
-    const userRole = localStorage.getItem("userRole");
-
     // Public routes that don't require authentication
     const publicRoutes = ["/", "/select-role"];
+
+    // Skip protection for profile setup page
+    if (pathname === "/profile-setup") {
+      setIsAuthorized(true);
+      setIsLoading(false);
+      return;
+    }
 
     // If we're on a public route, allow access
     if (publicRoutes.includes(pathname)) {
@@ -38,9 +39,27 @@ export function ProtectedRoute({
       return;
     }
 
+    // Check if wallet is connected
+    const walletAddress = localStorage.getItem("walletAddress");
+    const userRole = localStorage.getItem("userRole");
+    const hasProfile = localStorage.getItem("userProfile");
+
     // If authentication is required but wallet is not connected
     if (requireAuth && !walletAddress) {
       router.push("/");
+      return;
+    }
+
+    // If user has a role but no profile, redirect to profile setup
+    // (except when already on profile-setup page)
+    if (
+      requireAuth &&
+      walletAddress &&
+      userRole &&
+      !hasProfile &&
+      pathname !== "/profile-setup"
+    ) {
+      router.push("/profile-setup");
       return;
     }
 
@@ -59,7 +78,7 @@ export function ProtectedRoute({
     // If we get here, user is authorized
     setIsAuthorized(true);
     setIsLoading(false);
-  }, [router, pathname, requireAuth, requireRole, role]);
+  }, [router, pathname, requireAuth, requireRole, role, isConnected]);
 
   if (isLoading) {
     return (
