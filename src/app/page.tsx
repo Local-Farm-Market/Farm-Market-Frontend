@@ -9,10 +9,12 @@ import SellerDashboard from "@/src/app/seller-home/page";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Leaf, Wallet, ShoppingBasket } from "lucide-react";
 import BuyerDashboard from "./buyer-home/page";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
   const { role, setRole } = useUserRole();
   const [isConnected, setIsConnected] = useState(false);
+  const route = useRouter();
 
   useEffect(() => {
     // Check if wallet is connected
@@ -22,12 +24,14 @@ export default function Home() {
 
   // If user is a seller, show seller dashboard
   if (isConnected && role === "buyer") {
-    return <BuyerDashboard />;
+    // return <BuyerDashboard />;
+    route.push("/buyer-home");
   }
 
   // If user is a seller, show seller dashboard
   if (isConnected && role === "seller") {
-    return <SellerDashboard />;
+    // return <SellerDashboard />;
+    route.push("/seller-home");
   }
 
   // If not connected, show welcome screen
