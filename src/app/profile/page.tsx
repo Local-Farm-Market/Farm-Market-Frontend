@@ -110,6 +110,7 @@ const mockSellerUser = {
     ],
     farmSize: "25 acres",
   },
+  organicCertified: true,
   products: [
     {
       id: "1",
@@ -148,13 +149,13 @@ export default function ProfilePage() {
 
     // Filter out empty values
     const cleanedProfileData = Object.entries(profileData || {}).reduce(
-      (acc, [key, value]) => {
+      (acc: Record<string, any>, [key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
           acc[key] = value;
         }
         return acc;
       },
-      {}
+      {} as Record<string, any>
     );
 
     // Merge profile data with role-specific mock data for required fields only
@@ -172,19 +173,32 @@ export default function ProfilePage() {
     location: user.location || "",
     // For sellers
     farmName:
-      user.farmName ||
-      (role === "seller" && user.farmDetails ? user.farmDetails.name : ""),
+      role === "seller" && "farmDetails" in user && user.farmDetails
+        ? user.farmDetails.name
+        : "",
     farmDescription:
-      user.farmDescription ||
-      (role === "seller" && user.farmDetails
+      (role === "seller" && "farmDetails" in user && user.farmDetails
+        ? user.farmDetails.description
+        : "") ||
+      (role === "seller" && "farmDetails" in user && user.farmDetails
         ? user.farmDetails.description
         : ""),
     farmSize:
-      user.farmSize ||
-      (role === "seller" && user.farmDetails ? user.farmDetails.farmSize : ""),
-    organicCertified: user.organicCertified || false,
+      (role === "seller" && "farmDetails" in user && user.farmDetails
+        ? user.farmDetails.farmSize
+        : "") ||
+      (role === "seller" && "farmDetails" in user && user.farmDetails
+        ? user.farmDetails.farmSize
+        : ""),
+    organicCertified:
+      role === "seller" && "organicCertified" in user
+        ? user.organicCertified
+        : false,
     // For buyers
-    preferredCategories: user.preferredCategories || [],
+    preferredCategories:
+      role === "buyer" && "favoriteCategories" in user
+        ? user.favoriteCategories || []
+        : [],
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -204,39 +218,52 @@ export default function ProfilePage() {
   const handleSaveProfile = () => {
     // Filter out empty values
     const cleanedFormData = Object.entries(formData).reduce(
-      (acc, [key, value]) => {
+      (acc: Record<string, any>, [key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
           acc[key] = value;
         }
         return acc;
       },
-      {}
+      {} as Record<string, any>
     );
 
-    // Create updated user object
+    // Create updated user object with type safety
     const updatedUser = {
       ...user,
       ...cleanedFormData,
-      // Update nested properties for display if they exist
-      farmDetails:
-        role === "seller"
-          ? {
-              ...user.farmDetails,
-              ...(cleanedFormData.farmName
-                ? { name: cleanedFormData.farmName }
-                : {}),
-              ...(cleanedFormData.farmDescription
-                ? { description: cleanedFormData.farmDescription }
-                : {}),
-              ...(cleanedFormData.farmSize
-                ? { farmSize: cleanedFormData.farmSize }
-                : {}),
-            }
-          : user.farmDetails,
+      // Ensure farmDetails is properly typed for sellers
+      ...(role === "seller"
+        ? {
+            farmDetails: {
+              name:
+                cleanedFormData.farmName ||
+                ("farmDetails" in user ? user.farmDetails?.name : "") ||
+                "",
+              description:
+                cleanedFormData.farmDescription ||
+                ("farmDetails" in user ? user.farmDetails?.description : "") ||
+                "",
+              certifications:
+                ("farmDetails" in user
+                  ? user.farmDetails?.certifications
+                  : []) || [],
+              farmSize:
+                cleanedFormData.farmSize ||
+                ("farmDetails" in user ? user.farmDetails?.farmSize : "") ||
+                "",
+            },
+            rating: "rating" in user ? user.rating : 0,
+            reviewCount: "reviewCount" in user ? user.reviewCount : 0,
+            isSeller: true,
+            organicCertified:
+              "organicCertified" in user ? user.organicCertified : false,
+            products: "products" in user ? user.products : [],
+          }
+        : {}),
     };
 
-    // Update state
-    setUser(updatedUser);
+    // Update state with the properly typed object
+    setUser(updatedUser as typeof user);
 
     // Save to localStorage
     localStorage.setItem("userProfile", JSON.stringify(cleanedFormData));
@@ -311,15 +338,16 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {user.preferredCategories &&
-                user.preferredCategories.length > 0 && (
+              {"favoriteCategories" in user &&
+                user.favoriteCategories &&
+                user.favoriteCategories.length > 0 && (
                   <div className="w-full mt-6">
                     <h3 className="text-sm font-medium mb-2 flex items-center">
                       <Heart className="h-4 w-4 mr-1 text-amber-600" />
                       Favorite Categories
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                      {user.preferredCategories.map((category) => (
+                      {user.favoriteCategories.map((category) => (
                         <Badge
                           key={category}
                           variant="outline"
@@ -637,8 +665,11 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                {(user.organicCertified ||
-                  (user.farmDetails &&
+                {((role === "seller" &&
+                  "organicCertified" in user &&
+                  user.organicCertified) ||
+                  ("farmDetails" in user &&
+                    user.farmDetails &&
                     user.farmDetails.certifications &&
                     user.farmDetails.certifications.length > 0)) && (
                   <div className="w-full mt-6">
@@ -709,9 +740,11 @@ export default function ProfilePage() {
               {!isEditing ? (
                 <div className="space-y-4">
                   <div>
-                    {user.farmName ? (
+                    {role === "seller" &&
+                    "farmDetails" in user &&
+                    user.farmDetails.name ? (
                       <h3 className="font-medium text-lg text-amber-800 dark:text-amber-300">
-                        {user.farmName}
+                        {user.farmDetails.name}
                       </h3>
                     ) : (
                       <h3 className="font-medium text-lg text-amber-800/50 dark:text-amber-300/50 italic">
@@ -733,22 +766,28 @@ export default function ProfilePage() {
                     )}
                   </div>
 
-                  {(user.farmDescription || user.farmSize) && (
+                  {(("farmDetails" in user && user.farmDetails.description) ||
+                    ("farmDetails" in user && user.farmDetails.farmSize)) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                      {user.farmDescription && (
-                        <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
-                          <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">
-                            Farm Details
-                          </h4>
-                          <p className="text-sm">{user.farmDescription}</p>
-                        </div>
-                      )}
-                      {user.farmSize && (
+                      {"farmDetails" in user &&
+                        user.farmDetails?.description && (
+                          <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                            <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">
+                              Farm Details
+                            </h4>
+                            <p className="text-sm">
+                              {user.farmDetails?.description}
+                            </p>
+                          </div>
+                        )}
+                      {"farmDetails" in user && user.farmDetails?.farmSize && (
                         <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
                           <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
                             Farm Size
                           </h4>
-                          <p className="text-sm">{user.farmSize}</p>
+                          <p className="text-sm">
+                            {user.farmDetails?.farmSize}
+                          </p>
                         </div>
                       )}
                     </div>

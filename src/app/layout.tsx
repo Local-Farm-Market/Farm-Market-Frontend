@@ -4,6 +4,7 @@ import { ThemeProvider } from "@/src/components/theme-provider";
 import BottomNav from "@/src/components/layout/bottom-nav";
 import { UserRoleProvider } from "@/src/hooks/use-user-role";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
+import { CartProvider } from "@/src/hooks/use-cart";
 import "./globals.css";
 
 const nunito = Nunito({ subsets: ["latin"] });
@@ -11,7 +12,6 @@ const nunito = Nunito({ subsets: ["latin"] });
 export const metadata = {
   title: "Farm Marketplace",
   description: "Decentralized marketplace for agricultural products",
-  generator: "v0.dev",
 };
 
 export default function RootLayout({
@@ -31,17 +31,17 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <UserRoleProvider>
-            <ProtectedRoute requireAuth={false}>
-              <main className="flex-1 container mx-auto px-4 pb-20">
-                {children}
-              </main>
-              <BottomNav />
-            </ProtectedRoute>
+            <CartProvider>
+              <ProtectedRoute requireAuth={false}>
+                <main className="flex-1 container mx-auto px-4 pb-20">
+                  {children}
+                </main>
+                <BottomNav />
+              </ProtectedRoute>
+            </CartProvider>
           </UserRoleProvider>
         </ThemeProvider>
       </body>
     </html>
   );
 }
-
-import "./globals.css";

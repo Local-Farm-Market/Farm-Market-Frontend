@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
@@ -12,10 +12,12 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/src/components/ui/tabs";
-import { MapPin, Calendar, User, ShoppingCart } from "lucide-react";
+import { MapPin, Calendar, User, ShoppingCart, ArrowLeft } from "lucide-react";
 import { QrVerification } from "@/src/components/product/qr-verification";
 import { TransactionTracker } from "@/src/components/escrow/transaction-tracker";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
+import { useUserRole } from "@/src/hooks/use-user-role";
+import { AddToCartButton } from "@/src/components/product/add-to-cart-button";
 
 // Mock product data
 const mockProducts = [
@@ -213,30 +215,81 @@ const mockProducts = [
   },
 ];
 
-export default function ProductPage() {
-  const params = useParams();
-  const productId = params.id as string;
+// Create a wrapper component to handle the async params
+export default function ProductPageWrapper({
+  params,
+}: {
+  params: Promise<{ id: string }> | { id: string };
+}) {
+  // Use React.use to unwrap the Promise if params is a Promise
+  const resolvedParams = params instanceof Promise ? use(params) : params;
+
+  return <ProductPage id={resolvedParams.id} />;
+}
+
+// The main product page component now takes id directly
+function ProductPage({ id }: { id: string }) {
+  const router = useRouter();
+  const { role } = useUserRole();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [orderPlaced, setOrderPlaced] = useState(false);
-  const [totalPrice, setTotalPrice] = useState(3.99);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [product, setProduct] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Find the product with the matching ID
-  const product =
-    mockProducts.find((p) => p.id === productId) || mockProducts[0];
+  useEffect(() => {
+    // Simulate API fetch
+    const fetchProduct = () => {
+      setLoading(true);
+      // Find product by ID from our mock data
+      const foundProduct = mockProducts.find((p) => p.id === id);
+
+      if (foundProduct) {
+        setProduct(foundProduct);
+        setTotalPrice(foundProduct.price * quantity);
+      } else {
+        // Product not found, redirect to marketplace
+        router.push("/marketplace");
+      }
+
+      setLoading(false);
+    };
+
+    fetchProduct();
+  }, [id, router, quantity]);
 
   // Update total price when quantity changes
   useEffect(() => {
-    setTotalPrice(product.price * quantity);
-  }, [quantity, product.price]);
+    if (product) {
+      setTotalPrice(product.price * quantity);
+    }
+  }, [quantity, product]);
 
   const handleBuy = () => {
     setOrderPlaced(true);
   };
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center min-h-[60vh]">
+        Loading...
+      </div>
+    );
+  }
+
+  if (!product) {
+    return null; // Will redirect via useEffect
+  }
+
   return (
     <ProtectedRoute requireAuth={true}>
-      <div className="py-6">
+      <div className="py-6 max-w-4xl mx-auto">
+        <Button variant="ghost" onClick={() => router.back()} className="mb-6">
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back
+        </Button>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Product Images */}
           <div>
@@ -255,7 +308,7 @@ export default function ProductPage() {
               )}
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {product.images.map((image, index) => (
+              {product.images.map((image: string, index: number) => (
                 <div
                   key={index}
                   className={`relative w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2 ${
@@ -284,7 +337,7 @@ export default function ProductPage() {
               <span className="text-muted-foreground">{product.location}</span>
             </div>
 
-            <div className="mt-4 flex items-center gap-4">
+            <div className="mt-4 flex items-center gap-4 flex-wrap">
               <p className="text-3xl font-bold text-green-700 dark:text-green-400">
                 ${totalPrice.toFixed(2)}
               </p>
@@ -340,14 +393,47 @@ export default function ProductPage() {
                   +
                 </Button>
               </div>
-              <Button
-                className="flex-1 gap-2"
-                onClick={handleBuy}
-                disabled={!product.available || orderPlaced}
-              >
-                <ShoppingCart className="h-4 w-4" />
-                {orderPlaced ? "Order Placed" : "Buy Now"}
-              </Button>
+
+              {role === "buyer" && product.available ? (
+                <>
+                  <Button
+                    className="flex-1 gap-2"
+                    onClick={handleBuy}
+                    disabled={orderPlaced}
+                  >
+                    <ShoppingCart className="h-4 w-4" />
+                    {orderPlaced ? "Order Placed" : "Buy Now"}
+                  </Button>
+
+                  <AddToCartButton
+                    product={{
+                      id: product.id,
+                      title: product.title,
+                      price: product.price,
+                      image: product.images[0],
+                      sellerId: product.farmer.id,
+                      sellerName: product.farmer.name,
+                    }}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    variant="outline"
+                  />
+                </>
+              ) : (
+                <Button
+                  className="flex-1 gap-2"
+                  onClick={handleBuy}
+                  disabled={
+                    !product.available || orderPlaced || role !== "buyer"
+                  }
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  {role !== "buyer"
+                    ? "Switch to Buyer Account"
+                    : orderPlaced
+                    ? "Order Placed"
+                    : "Buy Now"}
+                </Button>
+              )}
             </div>
 
             <div className="mt-6">
@@ -376,7 +462,7 @@ export default function ProductPage() {
             <TabsContent value="details" className="space-y-4">
               <Card>
                 <CardContent className="p-6">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <h3 className="font-medium mb-2">Product Details</h3>
                       <ul className="space-y-2">
@@ -435,7 +521,7 @@ export default function ProductPage() {
                           key={key}
                           className="text-center p-4 bg-muted rounded-lg"
                         >
-                          <p className="text-lg font-bold">{value}</p>
+                          <p className="text-lg font-bold">{value as string}</p>
                           <p className="text-sm text-muted-foreground capitalize">
                             {key}
                           </p>
@@ -468,9 +554,10 @@ export default function ProductPage() {
                     </div>
                   </div>
                   <p className="mb-6">
-                    John Smith has been farming organically for over 15 years.
-                    His farm is certified organic and uses sustainable farming
-                    practices to grow the highest quality produce.
+                    {product.farmer.name} has been farming organically for over
+                    15 years. Their farm is certified organic and uses
+                    sustainable farming practices to grow the highest quality
+                    produce.
                   </p>
                 </CardContent>
               </Card>
