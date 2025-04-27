@@ -11,7 +11,11 @@ export default function BottomNav() {
   const { role } = useUserRole();
 
   // Don't show navigation on auth pages
-  if (pathname === "/select-role" || pathname === "/profile-setup") {
+  if (
+    pathname === "/select-role" ||
+    pathname === "/profile-setup" ||
+    pathname === "/"
+  ) {
     return null;
   }
 
@@ -20,9 +24,15 @@ export default function BottomNav() {
       <div className="container mx-auto px-4">
         <div className="flex justify-around items-center h-16">
           <Link
-            href="/"
+            href={
+              role === "buyer"
+                ? "/buyer-home"
+                : role === "seller"
+                ? "/seller-home"
+                : ""
+            }
             className={`flex flex-col items-center justify-center w-full h-full ${
-              pathname === "/"
+              pathname === "/buyer-home" || pathname === "/seller-home"
                 ? "text-amber-600 dark:text-amber-400"
                 : "text-gray-500 dark:text-gray-400"
             }`}
@@ -31,17 +41,19 @@ export default function BottomNav() {
             <span className="text-xs mt-1">Home</span>
           </Link>
 
-          <Link
-            href="/marketplace"
-            className={`flex flex-col items-center justify-center w-full h-full ${
-              pathname === "/marketplace"
-                ? "text-amber-600 dark:text-amber-400"
-                : "text-gray-500 dark:text-gray-400"
-            }`}
-          >
-            <ShoppingBag className="h-5 w-5" />
-            <span className="text-xs mt-1">Marketplace</span>
-          </Link>
+          {role === "buyer" && (
+            <Link
+              href="/marketplace"
+              className={`flex flex-col items-center justify-center w-full h-full ${
+                pathname === "/marketplace"
+                  ? "text-amber-600 dark:text-amber-400"
+                  : "text-gray-500 dark:text-gray-400"
+              }`}
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="text-xs mt-1">Marketplace</span>
+            </Link>
+          )}
 
           {role === "buyer" && (
             <Link
