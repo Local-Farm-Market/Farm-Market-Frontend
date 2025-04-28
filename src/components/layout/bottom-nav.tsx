@@ -34,7 +34,7 @@ export default function BottomNav() {
             className={`flex flex-col items-center justify-center w-full h-full ${
               pathname === "/buyer-home" || pathname === "/seller-home"
                 ? "text-amber-600 dark:text-amber-400"
-                : "text-gray-500 dark:text-gray-400"
+                : "text-muted-foreground dark:text-muted-foreground"
             }`}
           >
             <Home className="h-5 w-5" />
@@ -47,7 +47,7 @@ export default function BottomNav() {
               className={`flex flex-col items-center justify-center w-full h-full ${
                 pathname === "/marketplace"
                   ? "text-amber-600 dark:text-amber-400"
-                  : "text-gray-500 dark:text-gray-400"
+                  : "text-muted-foreground dark:text-muted-foreground"
               }`}
             >
               <ShoppingBag className="h-5 w-5" />
@@ -61,7 +61,7 @@ export default function BottomNav() {
               className={`flex flex-col items-center justify-center w-full h-full ${
                 pathname === "/cart"
                   ? "text-amber-600 dark:text-amber-400"
-                  : "text-gray-500 dark:text-gray-400"
+                  : "text-muted-foreground dark:text-muted-foreground"
               }`}
             >
               <CartIcon />
@@ -74,7 +74,7 @@ export default function BottomNav() {
             className={`flex flex-col items-center justify-center w-full h-full ${
               pathname === "/orders"
                 ? "text-amber-600 dark:text-amber-400"
-                : "text-gray-500 dark:text-gray-400"
+                : "text-muted-foreground dark:text-muted-foreground"
             }`}
           >
             <Package className="h-5 w-5" />
@@ -87,7 +87,7 @@ export default function BottomNav() {
               className={`flex flex-col items-center justify-center w-full h-full ${
                 pathname === "/products"
                   ? "text-amber-600 dark:text-amber-400"
-                  : "text-gray-500 dark:text-gray-400"
+                  : "text-muted-foreground dark:text-muted-foreground"
               }`}
             >
               <ShoppingBag className="h-5 w-5" />
@@ -100,7 +100,7 @@ export default function BottomNav() {
             className={`flex flex-col items-center justify-center w-full h-full ${
               pathname === "/wallet"
                 ? "text-amber-600 dark:text-amber-400"
-                : "text-gray-500 dark:text-gray-400"
+                : "text-muted-foreground dark:text-muted-foreground"
             }`}
           >
             <Wallet className="h-5 w-5" />
@@ -112,7 +112,7 @@ export default function BottomNav() {
             className={`flex flex-col items-center justify-center w-full h-full ${
               pathname === "/profile"
                 ? "text-amber-600 dark:text-amber-400"
-                : "text-gray-500 dark:text-gray-400"
+                : "text-muted-foreground dark:text-muted-foreground"
             }`}
           >
             <User className="h-5 w-5" />
