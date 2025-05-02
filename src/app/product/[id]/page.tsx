@@ -18,6 +18,8 @@ import { TransactionTracker } from "@/src/components/escrow/transaction-tracker"
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 import { useUserRole } from "@/src/hooks/use-user-role";
 import { AddToCartButton } from "@/src/components/product/add-to-cart-button";
+import { ProductReviews } from "@/src/components/product/product-reviews";
+import { StarRatingDisplay } from "@/src/components/product/star-rating-display";
 
 // Mock product data
 const mockProducts = [
@@ -359,10 +361,17 @@ function ProductPage({ id }: { id: string }) {
 
             <p className="mt-4">{product.description}</p>
 
-            <div className="flex items-center gap-4 mt-6">
+            <div className="flex flex-wrap items-center gap-4 mt-6">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
                 <span>Farmer: {product.farmer.name}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <StarRatingDisplay
+                  rating={product.farmer.rating}
+                  size="sm"
+                  showValue={true}
+                />
               </div>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -450,8 +459,9 @@ function ProductPage({ id }: { id: string }) {
         {/* Additional Information Tabs */}
         <div className="mt-12">
           <Tabs defaultValue="details">
-            <TabsList className="grid grid-cols-3 mb-6">
+            <TabsList className="grid grid-cols-4 mb-6">
               <TabsTrigger value="details">Details</TabsTrigger>
+              <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
               <TabsTrigger value="farmer">Farmer</TabsTrigger>
               {orderPlaced && (
@@ -508,6 +518,10 @@ function ProductPage({ id }: { id: string }) {
               </Card>
             </TabsContent>
 
+            <TabsContent value="reviews" className="space-y-4">
+              <ProductReviews productId={product.id} />
+            </TabsContent>
+
             <TabsContent value="nutrition" className="space-y-4">
               <Card>
                 <CardContent className="p-6">
@@ -521,7 +535,7 @@ function ProductPage({ id }: { id: string }) {
                           key={key}
                           className="text-center p-4 bg-muted rounded-lg"
                         >
-                          <p className="text-lg font-bold">{value as string}</p>
+                          <p className="text-lg font-bold">{String(value)}</p>
                           <p className="text-sm text-muted-foreground capitalize">
                             {key}
                           </p>

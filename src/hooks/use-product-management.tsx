@@ -23,6 +23,8 @@ export const mockProducts = [
     organic: true,
     location: "Green Valley Farm, California",
     unit: "lb",
+    rating: 4.7,
+    reviewCount: 28,
   },
   {
     id: "2",
@@ -39,6 +41,8 @@ export const mockProducts = [
     organic: false,
     location: "Sunset Ranch, Texas",
     unit: "lb",
+    rating: 4.9,
+    reviewCount: 15,
   },
   {
     id: "3",
@@ -54,6 +58,8 @@ export const mockProducts = [
     organic: true,
     location: "Happy Hen Farm, Oregon",
     unit: "dozen",
+    rating: 4.5,
+    reviewCount: 32,
   },
   {
     id: "4",
@@ -69,6 +75,8 @@ export const mockProducts = [
     organic: false,
     location: "Berry Fields, Washington",
     unit: "lb",
+    rating: 4.2,
+    reviewCount: 19,
   },
   {
     id: "5",
@@ -84,6 +92,8 @@ export const mockProducts = [
     organic: false,
     location: "Mountain Dairy, Vermont",
     unit: "oz",
+    rating: 4.8,
+    reviewCount: 24,
   },
   {
     id: "6",
@@ -100,6 +110,8 @@ export const mockProducts = [
     organic: true,
     location: "Golden Fields, Idaho",
     unit: "lb",
+    rating: 4.6,
+    reviewCount: 11,
   },
 ];
 

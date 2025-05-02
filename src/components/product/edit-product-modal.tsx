@@ -35,10 +35,12 @@ interface Product {
   status: string;
   category: string;
   dateAdded: string;
-  description: string; // Make this required to match mockProducts
-  organic: boolean; // Make this required to match mockProducts
-  location: string; // Make this required to match mockProducts
-  unit: string; // Make this required to match mockProducts
+  description: string;
+  organic: boolean;
+  location: string;
+  unit: string;
+  rating?: number;
+  reviewCount?: number;
 }
 
 interface EditProductModalProps {
@@ -106,6 +108,8 @@ export function EditProductModal({
             : formData.stock || 0) > 0
             ? "active"
             : "out_of_stock",
+        rating: product.rating || 0,
+        reviewCount: product.reviewCount || 0,
       };
 
       // Call the onSave callback

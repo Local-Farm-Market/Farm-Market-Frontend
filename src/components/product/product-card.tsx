@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Badge } from "@/src/components/ui/badge";
 import { MapPin, Leaf } from "lucide-react";
+import { StarRatingDisplay } from "./star-rating-display";
 
 interface ProductCardProps {
   id: string;
@@ -12,6 +13,8 @@ interface ProductCardProps {
   location: string;
   available: boolean;
   category: string;
+  rating?: number;
+  reviewCount?: number;
 }
 
 export function ProductCard({
@@ -22,6 +25,8 @@ export function ProductCard({
   location,
   available,
   category,
+  rating,
+  reviewCount,
 }: ProductCardProps) {
   return (
     <Link href={`/product/${id}`}>
@@ -62,6 +67,14 @@ export function ProductCard({
             <MapPin className="h-3 w-3 mr-1 text-amber-600 dark:text-amber-400" />
             <span className="line-clamp-1">{location}</span>
           </div>
+          {rating ? (
+            <div className="flex items-center justify-between mt-2 text-xs">
+              <StarRatingDisplay rating={rating} size="sm" showValue={true} />
+              <span className="text-muted-foreground">
+                {reviewCount || 0} {reviewCount === 1 ? "review" : "reviews"}
+              </span>
+            </div>
+          ) : null}
           {category.toLowerCase().includes("organic") ||
           title.toLowerCase().includes("organic") ? (
             <div className="flex items-center mt-2 text-green-600 dark:text-green-400 text-xs">

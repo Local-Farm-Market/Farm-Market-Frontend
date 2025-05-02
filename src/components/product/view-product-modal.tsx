@@ -24,10 +24,12 @@ interface Product {
   status: string;
   category: string;
   dateAdded: string;
-  description: string; // Make this required to match mockProducts
-  organic: boolean; // Make this required to match mockProducts
-  location: string; // Make this required to match mockProducts
-  unit: string; // Make this required to match mockProducts
+  description: string;
+  organic: boolean;
+  location: string;
+  unit: string;
+  rating?: number;
+  reviewCount?: number;
 }
 
 interface ViewProductModalProps {
@@ -90,6 +92,30 @@ export function ViewProductModal({
               <p className="text-2xl font-bold text-green-700 dark:text-green-400 mt-1">
                 ${product.price.toFixed(2)}
               </p>
+              {product.rating !== undefined && (
+                <div className="flex items-center gap-1 mt-1">
+                  <div className="flex">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <svg
+                        key={star}
+                        className={`w-4 h-4 ${
+                          star <= Math.round(product.rating || 0)
+                            ? "text-amber-500 fill-amber-500"
+                            : "text-gray-300 fill-gray-300"
+                        }`}
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
+                      </svg>
+                    ))}
+                  </div>
+                  <span className="text-sm text-muted-foreground">
+                    {product.rating?.toFixed(1)} ({product.reviewCount || 0}{" "}
+                    reviews)
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -158,7 +184,16 @@ export function ViewProductModal({
             className="gap-2 flex-1 sm:flex-none border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
             onClick={() => {
               onOpenChange(false);
-              onEdit(product);
+                const completeProduct: Product = {
+                  ...product,
+                  description: product.description || "",
+                  organic: product.organic || false,
+                  location: product.location || "",
+                  unit: product.unit || "",
+                  rating: product.rating || 0,
+                  reviewCount: product.reviewCount || 0,
+                };
+                onEdit(completeProduct);
             }}
           >
             <Edit className="h-4 w-4" />

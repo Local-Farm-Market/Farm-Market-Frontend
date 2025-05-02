@@ -23,10 +23,28 @@ import {
 } from "@/src/components/ui/select";
 import { Camera, Upload, Plus, Leaf } from "lucide-react";
 
+interface Product {
+  id: string;
+  title: string;
+  price: number;
+  image: string;
+  stock: number;
+  sold: number;
+  status: string;
+  category: string;
+  dateAdded: string;
+  description: string;
+  organic: boolean;
+  location: string;
+  unit: string;
+  rating: number;
+  reviewCount: number;
+}
+
 interface AddProductModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddProduct: (product: any) => void;
+  onAddProduct: (product: Product) => void;
 }
 
 export function AddProductModal({
@@ -44,6 +62,7 @@ export function AddProductModal({
     images: [] as string[],
     organic: false,
     location: "Green Valley, California",
+    image: "/placeholder.svg?height=200&width=200",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -60,27 +79,43 @@ export function AddProductModal({
   };
 
   const handleSubmit = async () => {
+    if (
+      !formData.title ||
+      !formData.category ||
+      !formData.price ||
+      !formData.stock
+    )
+      return;
+
     setIsSubmitting(true);
 
     try {
-      // Mock image upload
-      const mockImages = ["/placeholder.svg?height=400&width=400"];
+      // Generate a unique ID
+      const id = Math.random().toString(36).substring(2, 9);
 
-      // Create new product with generated ID
-      const newProduct = {
-        id: `prod_${Date.now()}`,
+      // Create new product
+      const newProduct: Product = {
+        id,
         title: formData.title,
+        price:
+          typeof formData.price === "string"
+            ? Number.parseFloat(formData.price)
+            : formData.price,
+        image: formData.image || "/placeholder.svg?height=200&width=200",
+        stock:
+          typeof formData.stock === "string"
+            ? Number.parseInt(formData.stock)
+            : formData.stock,
+        sold: 0,
+        status: Number(formData.stock) > 0 ? "active" : "out_of_stock",
         category: formData.category,
-        price: Number.parseFloat(formData.price) || 0,
-        stock: Number.parseInt(formData.stock) || 0,
-        unit: formData.unit,
-        description: formData.description,
-        image: mockImages[0],
-        images: mockImages,
-        available: (Number.parseInt(formData.stock) || 0) > 0,
-        organic: formData.organic,
-        location: formData.location,
         dateAdded: new Date().toISOString().split("T")[0],
+        description: formData.description || "",
+        organic: formData.organic || false,
+        location: formData.location || "",
+        unit: formData.unit || "",
+        rating: 0,
+        reviewCount: 0,
       };
 
       // Call the onAddProduct callback
@@ -92,13 +127,13 @@ export function AddProductModal({
         category: "",
         price: "",
         stock: "",
-        unit: "",
+        image: "/placeholder.svg?height=200&width=200",
         description: "",
-        images: [],
         organic: false,
-        location: "Green Valley, California",
+        location: "",
+        unit: "",
+        images: [],
       });
-
       onOpenChange(false);
     } catch (error) {
       console.error("Error adding product:", error);
