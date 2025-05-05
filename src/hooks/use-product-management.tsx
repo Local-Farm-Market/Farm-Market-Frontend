@@ -153,6 +153,8 @@ export function useProductManagement() {
       organic: product.organic || false,
       location: product.location || "",
       unit: product.unit || "",
+      rating: product.rating || 0,
+      reviewCount: product.reviewCount || 0,
     };
     setSelectedProduct(completeProduct);
     setEditProductModalOpen(true);
@@ -216,17 +218,7 @@ export function useProductManagement() {
               open={viewProductModalOpen}
               onOpenChange={setViewProductModalOpen}
               product={selectedProduct}
-              onEdit={(product) => {
-                // Ensure all required properties are present
-                const completeProduct = {
-                  ...product,
-                  description: product.description || "",
-                  organic: product.organic || false,
-                  location: product.location || "",
-                  unit: product.unit || "",
-                };
-                handleEditProduct(completeProduct);
-              }}
+              onEdit={(product) => handleEditProduct({ ...product, rating: product.rating || 0, reviewCount: product.reviewCount || 0 })}
               onDelete={(productId) => {
                 const productToDelete = products.find(
                   (product) => product.id === productId
@@ -241,7 +233,13 @@ export function useProductManagement() {
               open={editProductModalOpen}
               onOpenChange={setEditProductModalOpen}
               product={selectedProduct}
-              onSave={handleSaveProduct}
+              onSave={(updatedProduct) =>
+                handleSaveProduct({
+                  ...updatedProduct,
+                  rating: updatedProduct.rating || 0,
+                  reviewCount: updatedProduct.reviewCount || 0,
+                })
+              }
             />
 
             <DeleteProductModal
