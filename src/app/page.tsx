@@ -20,19 +20,19 @@ export default function Home() {
     // Check if wallet is connected
     const walletAddress = localStorage.getItem("walletAddress");
     setIsConnected(!!walletAddress);
-  }, []);
 
-  // If user is a seller, show seller dashboard
-  if (isConnected && role === "buyer") {
-    // return <BuyerDashboard />;
-    route.push("/buyer-home");
-  }
+    // If user is a seller, show seller dashboard
+    if (isConnected && role === "buyer") {
+      // return <BuyerDashboard />;
+      route.push("/buyer-home");
+    }
 
-  // If user is a seller, show seller dashboard
-  if (isConnected && role === "seller") {
-    // return <SellerDashboard />;
-    route.push("/seller-home");
-  }
+    // If user is a seller, show seller dashboard
+    if (isConnected && role === "seller") {
+      // return <SellerDashboard />;
+      route.push("/seller-home");
+    }
+  }, [isConnected, role, route]);
 
   // If not connected, show welcome screen
   if (!isConnected) {

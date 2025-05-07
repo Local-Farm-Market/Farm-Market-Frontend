@@ -6,6 +6,7 @@ import { UserRoleProvider } from "@/src/hooks/use-user-role";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 import { CartProvider } from "@/src/hooks/use-cart";
 import "./globals.css";
+import Provider from "../components/Provider";
 
 const nunito = Nunito({ subsets: ["latin"] });
 
@@ -26,16 +27,18 @@ export default function RootLayout({
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem
           disableTransitionOnChange
         >
           <UserRoleProvider>
             <CartProvider>
               <ProtectedRoute requireAuth={false}>
-                <main className="flex-1 container mx-auto px-4 pb-20">
-                  {children}
-                </main>
+                <Provider>
+                  <main className="flex-1 container mx-auto px-4 pb-20">
+                    {children}
+                  </main>
+                </Provider>
                 <BottomNav />
               </ProtectedRoute>
             </CartProvider>
