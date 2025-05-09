@@ -4,137 +4,99 @@ import type React from "react";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/src/components/ui/button";
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
   CardDescription,
   CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/src/components/ui/card";
-import { Button } from "@/src/components/ui/button";
 import { Input } from "@/src/components/ui/input";
 import { Label } from "@/src/components/ui/label";
 import { Textarea } from "@/src/components/ui/textarea";
-import { Switch } from "@/src/components/ui/switch";
-import { Avatar, AvatarFallback } from "@/src/components/ui/avatar";
-import { Camera, Leaf, Store, MapPin, User, ArrowLeft } from "lucide-react";
 import { useUserRole } from "@/src/hooks/use-user-role";
+import { useAccount } from "wagmi";
+import { toast } from "@/src/components/ui/use-toast";
+import { saveWalletProfile, getWalletRole } from "@/src/lib/wallet-storage";
 
 export default function ProfileSetupPage() {
   const router = useRouter();
   const { role } = useUserRole();
-  const [isLoading, setIsLoading] = useState(false);
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const { address, isConnected } = useAccount();
 
-  // Common form fields
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    location: "",
-    bio: "",
-    // Seller-specific fields
-    farmName: "",
-    farmDescription: "",
-    farmSize: "",
-    organicCertified: false,
-    // Buyer-specific fields
-    preferredCategories: [] as string[],
-    notificationPreferences: {
-      orderUpdates: true,
-      paymentNotifications: true,
-      newListings: false,
-    },
-  });
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [location, setLocation] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // Check if wallet is connected
-    const savedWallet = localStorage.getItem("walletAddress");
-    setWalletAddress(savedWallet);
-
-    // If wallet is not connected, redirect to home
-    if (!savedWallet) {
-      router.push("/");
-      return;
-    }
-
-    // Check if user already has a profile
-    const hasProfile = localStorage.getItem("userProfile");
-    if (hasProfile) {
+    if (!isConnected || !address) {
       router.push("/");
       return;
     }
 
     // Check if role is selected
-    const savedRole = localStorage.getItem("userRole");
+    const savedRole = getWalletRole(address);
     if (!savedRole) {
       router.push("/select-role");
       return;
     }
 
-    setInitialCheckDone(true);
-  }, [router]);
+    setIsLoading(false);
+  }, [router, isConnected, address]);
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
-  };
-
-  const handleSwitchChange = (name: string) => {
-    if (name === "organicCertified") {
-      setFormData({
-        ...formData,
-        organicCertified: !formData.organicCertified,
-      });
-    } else {
-      // Handle other switches if needed
-    }
-  };
-
-  const handleCategoryToggle = (category: string) => {
-    const updatedCategories = [...formData.preferredCategories];
-    if (updatedCategories.includes(category)) {
-      const index = updatedCategories.indexOf(category);
-      updatedCategories.splice(index, 1);
-    } else {
-      updatedCategories.push(category);
-    }
-    setFormData({ ...formData, preferredCategories: updatedCategories });
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
-    // Filter out empty values
-    const filteredData = Object.fromEntries(
-      Object.entries(formData).filter(([_, value]) => {
-        if (value === null || value === undefined) return false;
-        if (typeof value === "string" && value.trim() === "") return false;
-        if (Array.isArray(value) && value.length === 0) return false;
-        return true;
-      })
-    );
+    if (!address) return;
 
-    // Save profile data to localStorage
-    localStorage.setItem("userProfile", JSON.stringify(filteredData));
+    setIsSaving(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push("/");
-    }, 1000);
+    try {
+      // Create profile object
+      const profile = {
+        name,
+        bio,
+        location,
+        createdAt: Date.now(),
+      };
+
+      // Save profile to wallet-specific storage
+      saveWalletProfile(address, profile);
+
+      // Show success message
+      toast({
+        title: "Profile Created",
+        description: "Your profile has been set up successfully!",
+        duration: 3000,
+      });
+
+      // Redirect based on role
+      const savedRole = getWalletRole(address);
+      if (savedRole === "buyer") {
+        router.push("/buyer-home");
+      } else {
+        router.push("/seller-home");
+      }
+    } catch (error) {
+      console.error("Failed to save profile:", error);
+      toast({
+        title: "Profile Setup Failed",
+        description:
+          "There was an error setting up your profile. Please try again.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const goBack = () => {
-    router.push("/select-role");
-  };
-
-  // Don't render anything until initial checks are done
-  if (!initialCheckDone) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-600"></div>
@@ -142,329 +104,62 @@ export default function ProfileSetupPage() {
     );
   }
 
-  // If no role is set, show an error
-  if (!role) {
-    return (
-      <div className="container max-w-2xl mx-auto py-12">
-        <Card className="border-red-200 dark:border-red-900/50">
-          <CardHeader>
-            <CardTitle className="text-2xl text-red-600">Setup Error</CardTitle>
-            <CardDescription>
-              No role has been selected. Please go back and select a role.
-            </CardDescription>
-          </CardHeader>
-          <CardFooter>
-            <Button onClick={() => router.push("/select-role")}>
-              Select Role
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="container max-w-2xl mx-auto py-12">
-      <Button variant="ghost" onClick={goBack} className="mb-6">
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back to Role Selection
-      </Button>
-
-      <Card className="border-amber-100 dark:border-amber-900/50">
+    <div className="container max-w-md mx-auto py-12">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-2xl flex items-center gap-2 text-amber-800 dark:text-amber-300">
-            {role === "seller" ? (
-              <Store className="h-6 w-6 text-amber-600" />
-            ) : (
-              <User className="h-6 w-6 text-amber-600" />
-            )}
-            {role === "seller" ? "Seller Profile Setup" : "Buyer Profile Setup"}
-          </CardTitle>
+          <CardTitle>Complete Your Profile</CardTitle>
           <CardDescription>
-            {role === "seller"
-              ? "Complete your seller profile to start listing your farm products"
-              : "Complete your buyer profile to start shopping for fresh produce"}
+            {role === "buyer"
+              ? "Tell us a bit about yourself as a buyer"
+              : "Set up your farm profile to start selling"}
           </CardDescription>
         </CardHeader>
-
         <form onSubmit={handleSubmit}>
-          <CardContent className="space-y-6">
-            {/* Profile Picture */}
-            <div className="flex flex-col items-center">
-              <div className="relative mb-4">
-                <Avatar className="w-24 h-24">
-                  <AvatarFallback className="bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200">
-                    {formData.name
-                      ? formData.name.charAt(0).toUpperCase()
-                      : "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  className="absolute bottom-0 right-0 rounded-full h-8 w-8 bg-amber-100 hover:bg-amber-200 text-amber-700 dark:bg-amber-800 dark:hover:bg-amber-700 dark:text-amber-200"
-                >
-                  <Camera className="h-4 w-4" />
-                </Button>
-              </div>
-              {walletAddress && (
-                <p className="text-xs text-muted-foreground font-mono">
-                  Connected: {walletAddress.substring(0, 8)}...
-                  {walletAddress.substring(walletAddress.length - 8)}
-                </p>
-              )}
-            </div>
-
-            {/* Common Fields */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">
-                  Full Name <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  placeholder="Enter your full name"
-                  className="border-amber-200 dark:border-amber-800"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">
-                  Email Address <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Enter your email address"
-                  className="border-amber-200 dark:border-amber-800"
-                  required
-                />
-              </div>
-            </div>
-
+          <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="location" className="flex items-center gap-1">
-                <MapPin className="h-4 w-4 text-amber-600" />
-                Location <span className="text-red-500">*</span>
+              <Label htmlFor="name">
+                {role === "buyer" ? "Your Name" : "Farm/Business Name"}*
               </Label>
               <Input
-                id="location"
-                name="location"
-                value={formData.location}
-                onChange={handleInputChange}
-                placeholder="City, State"
-                className="border-amber-200 dark:border-amber-800"
+                id="name"
+                placeholder={role === "buyer" ? "John Doe" : "Green Acres Farm"}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="bio">Bio</Label>
+              <Label htmlFor="bio">
+                {role === "buyer" ? "About You" : "Farm Description"}
+              </Label>
               <Textarea
                 id="bio"
-                name="bio"
-                value={formData.bio}
-                onChange={handleInputChange}
-                placeholder="Tell us a bit about yourself"
-                className="border-amber-200 dark:border-amber-800"
-                rows={3}
+                placeholder={
+                  role === "buyer"
+                    ? "Tell us about your interests in farm products..."
+                    : "Describe your farm, growing practices, specialties..."
+                }
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
+                className="min-h-[100px]"
               />
             </div>
 
-            {/* Seller-specific Fields */}
-            {role === "seller" && (
-              <div className="space-y-4 pt-2 border-t border-amber-100 dark:border-amber-900/50">
-                <h3 className="font-medium flex items-center gap-2 text-amber-800 dark:text-amber-300">
-                  <Leaf className="h-5 w-5 text-amber-600" />
-                  Farm Details
-                </h3>
-
-                <div className="space-y-2">
-                  <Label htmlFor="farmName">
-                    Farm Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="farmName"
-                    name="farmName"
-                    value={formData.farmName}
-                    onChange={handleInputChange}
-                    placeholder="Enter your farm name"
-                    className="border-amber-200 dark:border-amber-800"
-                    required={role === "seller"}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="farmDescription">Farm Description</Label>
-                  <Textarea
-                    id="farmDescription"
-                    name="farmDescription"
-                    value={formData.farmDescription}
-                    onChange={handleInputChange}
-                    placeholder="Describe your farm and what you produce"
-                    className="border-amber-200 dark:border-amber-800"
-                    rows={3}
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="farmSize">Farm Size</Label>
-                    <Input
-                      id="farmSize"
-                      name="farmSize"
-                      value={formData.farmSize}
-                      onChange={handleInputChange}
-                      placeholder="e.g., 5 acres"
-                      className="border-amber-200 dark:border-amber-800"
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2 pt-8">
-                    <Switch
-                      id="organicCertified"
-                      checked={formData.organicCertified}
-                      onCheckedChange={() =>
-                        handleSwitchChange("organicCertified")
-                      }
-                    />
-                    <Label
-                      htmlFor="organicCertified"
-                      className="flex items-center gap-1"
-                    >
-                      <Leaf className="h-4 w-4 text-green-600" />
-                      Certified Organic
-                    </Label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Buyer-specific Fields */}
-            {role === "buyer" && (
-              <div className="space-y-4 pt-2 border-t border-amber-100 dark:border-amber-900/50">
-                <h3 className="font-medium flex items-center gap-2 text-amber-800 dark:text-amber-300">
-                  <Leaf className="h-5 w-5 text-amber-600" />
-                  Shopping Preferences
-                </h3>
-
-                <div className="space-y-2">
-                  <Label>Preferred Categories</Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 pt-2">
-                    {[
-                      "Vegetables",
-                      "Fruits",
-                      "Dairy",
-                      "Meat",
-                      "Poultry",
-                      "Grains",
-                      "Organic",
-                    ].map((category) => (
-                      <div
-                        key={category}
-                        className="flex items-center space-x-2"
-                      >
-                        <Switch
-                          id={`category-${category}`}
-                          checked={formData.preferredCategories.includes(
-                            category
-                          )}
-                          onCheckedChange={() => handleCategoryToggle(category)}
-                        />
-                        <Label htmlFor={`category-${category}`}>
-                          {category}
-                        </Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Notification Preferences</Label>
-                  <div className="space-y-2 pt-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="orderUpdates"
-                        checked={formData.notificationPreferences.orderUpdates}
-                        onCheckedChange={() => {
-                          setFormData({
-                            ...formData,
-                            notificationPreferences: {
-                              ...formData.notificationPreferences,
-                              orderUpdates:
-                                !formData.notificationPreferences.orderUpdates,
-                            },
-                          });
-                        }}
-                      />
-                      <Label htmlFor="orderUpdates">Order Updates</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="paymentNotifications"
-                        checked={
-                          formData.notificationPreferences.paymentNotifications
-                        }
-                        onCheckedChange={() => {
-                          setFormData({
-                            ...formData,
-                            notificationPreferences: {
-                              ...formData.notificationPreferences,
-                              paymentNotifications:
-                                !formData.notificationPreferences
-                                  .paymentNotifications,
-                            },
-                          });
-                        }}
-                      />
-                      <Label htmlFor="paymentNotifications">
-                        Payment Notifications
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="newListings"
-                        checked={formData.notificationPreferences.newListings}
-                        onCheckedChange={() => {
-                          setFormData({
-                            ...formData,
-                            notificationPreferences: {
-                              ...formData.notificationPreferences,
-                              newListings:
-                                !formData.notificationPreferences.newListings,
-                            },
-                          });
-                        }}
-                      />
-                      <Label htmlFor="newListings">New Product Listings</Label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                placeholder="City, State"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+              />
+            </div>
           </CardContent>
-
-          <CardFooter className="flex justify-between border-t border-amber-100 dark:border-amber-900/50 pt-6">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={goBack}
-              className="border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-800 dark:text-amber-400 dark:hover:bg-amber-950/30"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="bg-amber-600 hover:bg-amber-700 text-white"
-            >
-              {isLoading ? "Saving..." : "Complete Profile"}
+          <CardFooter>
+            <Button type="submit" className="w-full" disabled={isSaving}>
+              {isSaving ? "Saving..." : "Complete Setup"}
             </Button>
           </CardFooter>
         </form>

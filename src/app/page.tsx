@@ -5,34 +5,38 @@ import { WalletConnect } from "@/src/components/auth/wallet-connect";
 import { OnboardingGuide } from "@/src/components/auth/onboarding-guide";
 import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import { useUserRole } from "@/src/hooks/use-user-role";
-import SellerDashboard from "@/src/app/seller-home/page";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Leaf, Wallet, ShoppingBasket } from "lucide-react";
-import BuyerDashboard from "./buyer-home/page";
 import { useRouter } from "next/navigation";
+import { useAccount } from "wagmi";
+import { getWalletRole, hasProfile } from "@/src/lib/wallet-storage";
 
 export default function Home() {
-  const { role, setRole } = useUserRole();
-  const [isConnected, setIsConnected] = useState(false);
-  const route = useRouter();
+  const router = useRouter();
+  const { address, isConnected } = useAccount();
+  const { checkAndRedirect } = useUserRole();
 
+  // Check user state and redirect if needed
   useEffect(() => {
-    // Check if wallet is connected
-    const walletAddress = localStorage.getItem("walletAddress");
-    setIsConnected(!!walletAddress);
+    if (isConnected && address) {
+      const userRole = getWalletRole(address);
+      const userHasProfile = hasProfile(address);
 
-    // If user is a seller, show seller dashboard
-    if (isConnected && role === "buyer") {
-      // return <BuyerDashboard />;
-      route.push("/buyer-home");
+      if (!userRole) {
+        // No role selected, redirect to role selection
+        router.push("/select-role");
+      } else if (!userHasProfile) {
+        // Role selected but no profile, redirect to profile setup
+        router.push("/profile-setup");
+      } else if (userRole === "buyer") {
+        // Buyer with profile, redirect to buyer home
+        router.push("/buyer-home");
+      } else if (userRole === "seller") {
+        // Seller with profile, redirect to marketplace
+        router.push("/seller-home");
+      }
     }
-
-    // If user is a seller, show seller dashboard
-    if (isConnected && role === "seller") {
-      // return <SellerDashboard />;
-      route.push("/seller-home");
-    }
-  }, [isConnected, role, route]);
+  }, [router, isConnected, address, checkAndRedirect]);
 
   // If not connected, show welcome screen
   if (!isConnected) {
@@ -53,7 +57,7 @@ export default function Home() {
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-            <WalletConnect onRoleSelect={setRole} />
+            <WalletConnect />
             <OnboardingGuide />
             <ThemeToggle />
           </div>

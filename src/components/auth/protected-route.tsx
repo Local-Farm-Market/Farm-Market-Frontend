@@ -3,6 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useUserRole } from "@/src/hooks/use-user-role";
+import { useAccount } from "wagmi";
+import { getWalletRole, hasProfile } from "@/src/lib/wallet-storage";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -17,7 +19,8 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { role, isConnected } = useUserRole();
+  const { role, isConnected, checkAndRedirect } = useUserRole();
+  const { address } = useAccount();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -40,45 +43,51 @@ export function ProtectedRoute({
     }
 
     // Check if wallet is connected
-    const walletAddress = localStorage.getItem("walletAddress");
-    const userRole = localStorage.getItem("userRole");
-    const hasProfile = localStorage.getItem("userProfile");
-
-    // If authentication is required but wallet is not connected
-    if (requireAuth && !walletAddress) {
+    if (requireAuth && !isConnected) {
       router.push("/");
       return;
     }
 
     // If user has a role but no profile, redirect to profile setup
     // (except when already on profile-setup page)
-    if (
-      requireAuth &&
-      walletAddress &&
-      userRole &&
-      !hasProfile &&
-      pathname !== "/profile-setup"
-    ) {
-      router.push("/profile-setup");
-      return;
-    }
+    if (requireAuth && address) {
+      const userRole = getWalletRole(address);
+      const userHasProfile = hasProfile(address);
 
-    // If a specific role is required but user doesn't have that role
-    if (requireRole && userRole !== requireRole) {
-      // If user has no role, send to role selection
-      if (!userRole) {
-        router.push("/select-role");
-      } else {
-        // If user has wrong role, send to home
-        router.push("/");
+      if (userRole && !userHasProfile && pathname !== "/profile-setup") {
+        router.push("/profile-setup");
+        return;
       }
-      return;
+
+      // If a specific role is required but user doesn't have that role
+      if (requireRole && userRole !== requireRole) {
+        // If user has no role, send to role selection
+        if (!userRole) {
+          router.push("/select-role");
+        } else {
+          // If user has wrong role, send to home
+          router.push("/");
+        }
+        return;
+      }
     }
 
     // If we get here, user is authorized
     setIsAuthorized(true);
     setIsLoading(false);
-  }, [router, pathname, requireAuth, requireRole, role, isConnected]);
+
+    // Check and redirect based on user state
+    checkAndRedirect();
+  }, [
+    router,
+    pathname,
+    requireAuth,
+    requireRole,
+    role,
+    isConnected,
+    address,
+    checkAndRedirect,
+  ]);
 
   if (isLoading) {
     return (

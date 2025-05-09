@@ -7,57 +7,80 @@ import { Leaf, ShoppingBasket, ArrowLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useUserRole } from "@/src/hooks/use-user-role";
 import type { UserRole } from "@/src/components/auth/wallet-connect";
+import { useAccount, useDisconnect } from "wagmi";
+import { toast } from "@/src/components/ui/use-toast";
+import { saveWalletRole, hasProfile } from "@/src/lib/wallet-storage";
 
 export default function SelectRolePage() {
   const router = useRouter();
   const { role, setRole } = useUserRole();
-  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Use wagmi hooks
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+
   useEffect(() => {
-    // Check if wallet is connected
-    const savedWallet = localStorage.getItem("walletAddress");
-    const savedRole = localStorage.getItem("userRole") as UserRole;
-    const hasProfile = localStorage.getItem("userProfile");
-
-    setWalletAddress(savedWallet);
-
-    // If wallet is not connected, redirect to home
-    if (!savedWallet) {
+    // Check if wallet is connected using wagmi
+    if (!isConnected || !address) {
       router.push("/");
       return;
     }
 
-    // If role is already selected AND profile is set up, redirect to home
-    if (savedRole && hasProfile) {
-      router.push("/");
-      return;
-    }
+    // Check if user already has a role and profile
+    const userHasProfile = hasProfile(address);
 
-    // If role is selected but no profile, redirect to profile setup
-    if (savedRole && !hasProfile) {
-      router.push("/profile-setup");
+    // If user already has a profile, redirect to home
+    if (userHasProfile) {
+      router.push("/");
       return;
     }
 
     setIsLoading(false);
-  }, [router]);
+  }, [router, isConnected, address]);
 
   const selectRole = (selectedRole: UserRole) => {
-    // Save role to localStorage
-    localStorage.setItem("userRole", selectedRole || "");
+    if (!address) return;
+
+    // Save role to wallet-specific storage
+    saveWalletRole(address, selectedRole);
 
     // Update context
     setRole(selectedRole);
+
+    // Show success toast
+    toast({
+      title: "Role Selected",
+      description: `You've selected the ${selectedRole} role.`,
+      duration: 3000,
+    });
 
     // Redirect to profile setup page
     router.push("/profile-setup");
   };
 
-  const goBack = () => {
-    // Clear wallet connection
-    localStorage.removeItem("walletAddress");
-    router.push("/");
+  const goBack = async () => {
+    try {
+      // Disconnect wallet using wagmi
+      await disconnect();
+
+      toast({
+        title: "Wallet Disconnected",
+        description: "Your wallet has been disconnected.",
+        duration: 3000,
+      });
+
+      // Redirect to home
+      router.push("/");
+    } catch (error) {
+      console.error("Failed to disconnect wallet:", error);
+      toast({
+        title: "Disconnect Failed",
+        description: "There was an error disconnecting your wallet.",
+        variant: "destructive",
+        duration: 5000,
+      });
+    }
   };
 
   if (isLoading) {
@@ -67,6 +90,14 @@ export default function SelectRolePage() {
       </div>
     );
   }
+
+  // Function to get shortened address for display
+  const getShortenedAddress = (address: string) => {
+    if (!address) return "";
+    return `${address.substring(0, 6)}...${address.substring(
+      address.length - 4
+    )}`;
+  };
 
   return (
     <div className="container max-w-md mx-auto py-12">
@@ -79,9 +110,10 @@ export default function SelectRolePage() {
         <p className="text-muted-foreground">
           Select how you want to use the Farm Marketplace
         </p>
-        {walletAddress && (
+        {address && (
           <p className="text-xs mt-2 text-muted-foreground">
-            Connected: <span className="font-mono">{walletAddress}</span>
+            Connected:{" "}
+            <span className="font-mono">{getShortenedAddress(address)}</span>
           </p>
         )}
       </div>
