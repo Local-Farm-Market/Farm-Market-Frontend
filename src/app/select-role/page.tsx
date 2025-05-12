@@ -13,14 +13,18 @@ import { saveWalletRole, hasProfile } from "@/src/lib/wallet-storage";
 
 export default function SelectRolePage() {
   const router = useRouter();
-  const { role, setRole } = useUserRole();
+  const { role, setRole, isRedirecting } = useUserRole();
   const [isLoading, setIsLoading] = useState(true);
+  const [isSelecting, setIsSelecting] = useState(false);
 
   // Use wagmi hooks
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
 
   useEffect(() => {
+    // Don't do anything if we're already redirecting
+    if (isRedirecting) return;
+
     // Check if wallet is connected using wagmi
     if (!isConnected || !address) {
       router.push("/");
@@ -30,33 +34,43 @@ export default function SelectRolePage() {
     // Check if user already has a role and profile
     const userHasProfile = hasProfile(address);
 
-    // If user already has a profile, redirect to home
-    if (userHasProfile) {
-      router.push("/");
-      return;
-    }
+    // // If user already has a profile, redirect to home
+    // if (userHasProfile) {
+    //   router.push("/");
+    //   return;
+    // }
 
     setIsLoading(false);
-  }, [router, isConnected, address]);
+  }, [router, isConnected, address, isRedirecting]);
 
-  const selectRole = (selectedRole: UserRole) => {
+  const selectRole = async (selectedRole: UserRole) => {
     if (!address) return;
 
-    // Save role to wallet-specific storage
-    saveWalletRole(address, selectedRole);
+    setIsSelecting(true);
 
-    // Update context
-    setRole(selectedRole);
+    try {
+      // Save role to wallet-specific storage
+      saveWalletRole(address, selectedRole);
 
-    // Show success toast
-    toast({
-      title: "Role Selected",
-      description: `You've selected the ${selectedRole} role.`,
-      duration: 3000,
-    });
+      // Update context
+      setRole(selectedRole);
 
-    // Redirect to profile setup page
-    router.push("/profile-setup");
+      // Show success toast
+      toast({
+        title: "Role Selected",
+        description: `You've selected the ${selectedRole} role.`,
+        duration: 3000,
+      });
+
+      // Add a small delay before redirecting
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      // Redirect to profile setup page
+      router.push("/profile-setup");
+    } catch (error) {
+      console.error("Error selecting role:", error);
+      setIsSelecting(false);
+    }
   };
 
   const goBack = async () => {
@@ -83,7 +97,7 @@ export default function SelectRolePage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || isSelecting) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-600"></div>

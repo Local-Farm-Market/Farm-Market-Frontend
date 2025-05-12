@@ -15,6 +15,8 @@ import { Badge } from "@/src/components/ui/badge";
 import { toast } from "@/src/components/ui/use-toast";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useDisconnect } from "wagmi";
+import { getWalletRole, clearWalletData } from "@/src/lib/wallet-storage";
+import { useUserRole } from "@/src/hooks/use-user-role";
 
 export type UserRole = "buyer" | "seller" | null;
 
@@ -25,33 +27,75 @@ interface WalletConnectProps {
 export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [role, setRole] = useState<UserRole>(null);
+  const [localRole, setLocalRole] = useState<UserRole>(null);
   const router = useRouter();
+
+  // Get role from context
+  const { role: contextRole, setRole: setContextRole } = useUserRole();
 
   // RainbowKit/wagmi hooks
   const { address, isConnected } = useAccount();
   const { disconnect } = useDisconnect();
 
-  // Check if wallet is already connected on component mount
-  useEffect(() => {
-    // Get role from localStorage
-    const savedRole = localStorage.getItem("userRole") as UserRole;
-
-    if (savedRole) {
-      setRole(savedRole);
-
-      if (onRoleSelect) {
-        onRoleSelect(savedRole);
-      }
+  // Debug function to log state
+  const logState = (message: string, data?: any) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[WalletConnect] ${message}`, {
+        address,
+        isConnected,
+        localRole,
+        contextRole,
+        ...data,
+      });
     }
-  }, [onRoleSelect]);
+  };
+
+  // Update local role when address or context role changes
+  useEffect(() => {
+    if (address) {
+      // First check context role
+      if (contextRole) {
+        logState(`Using role from context`, { contextRole });
+        setLocalRole(contextRole);
+        return;
+      }
+
+      // If no context role, check storage
+      const savedRole = getWalletRole(address);
+      logState(`Retrieved role from storage`, { savedRole });
+
+      if (savedRole) {
+        setLocalRole(savedRole);
+
+        // Also update context if needed
+        if (savedRole !== contextRole) {
+          logState(`Updating context role from storage`, {
+            savedRole,
+            contextRole,
+          });
+          setContextRole(savedRole);
+        }
+
+        if (onRoleSelect) {
+          onRoleSelect(savedRole);
+        }
+      } else {
+        setLocalRole(null);
+      }
+    } else {
+      setLocalRole(null);
+    }
+  }, [address, contextRole, setContextRole, onRoleSelect]);
 
   // Watch for wallet connection changes
   useEffect(() => {
     if (isConnected && address) {
+      logState(`Wallet connected`);
+
       // If user hasn't selected a role yet, redirect to role selection
-      const savedRole = localStorage.getItem("userRole") as UserRole;
+      const savedRole = getWalletRole(address);
       if (!savedRole) {
+        logState(`No role found, redirecting to role selection`);
         router.push("/select-role");
       }
     }
@@ -59,12 +103,22 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
 
   const disconnectWallet = async () => {
     try {
+      logState(`Disconnecting wallet`);
+
+      // Clear wallet data before disconnecting
+      if (address) {
+        clearWalletData(address);
+      }
+
+      // Disconnect wallet
       disconnect();
-      setRole(null);
+
+      // Update local state
+      setLocalRole(null);
       setShowWalletDetails(false);
 
-      // Clear localStorage
-      localStorage.removeItem("userRole");
+      // Update context
+      setContextRole(null);
 
       if (onRoleSelect) {
         onRoleSelect(null);
@@ -109,29 +163,6 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
     return `${address.substring(0, 6)}...${address.substring(
       address.length - 4
     )}`;
-  };
-
-  // Custom wallet button that opens details dialog
-  const CustomWalletButton = () => {
-    if (!isConnected || !address) return null;
-
-    return (
-      <Button
-        variant="outline"
-        className="flex items-center gap-2"
-        onClick={() => setShowWalletDetails(true)}
-      >
-        <Wallet className="h-4 w-4" />
-        <span className="truncate max-w-[100px]">
-          {getShortenedAddress(address)}
-        </span>
-        {role && (
-          <span className="ml-1 text-xs px-1.5 py-0.5 bg-primary/10 rounded-full">
-            {role}
-          </span>
-        )}
-      </Button>
-    );
   };
 
   return (
@@ -198,9 +229,9 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
                     <span className="truncate max-w-[100px]">
                       {getShortenedAddress(account.address)}
                     </span>
-                    {role && (
-                      <span className="ml-1 text-xs px-1.5 py-0.5 bg-primary/10 rounded-full">
-                        {role}
+                    {localRole && (
+                      <span className="ml-1 text-xs px-1.5 py-0.5 bg-primary/10 rounded-full capitalize">
+                        {localRole}
                       </span>
                     )}
                   </Button>
@@ -227,9 +258,9 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
 
               <div className="flex items-center gap-2 mb-4">
                 <Badge className="bg-green-500 text-white">Connected</Badge>
-                {role && (
+                {localRole && (
                   <Badge className="bg-amber-500 text-white capitalize">
-                    {role}
+                    {localRole}
                   </Badge>
                 )}
               </div>

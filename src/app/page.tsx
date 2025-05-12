@@ -14,29 +14,36 @@ import { getWalletRole, hasProfile } from "@/src/lib/wallet-storage";
 export default function Home() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
-  const { checkAndRedirect } = useUserRole();
+  const { checkAndRedirect, isRedirecting } = useUserRole();
+  const [hasCheckedRedirect, setHasCheckedRedirect] = useState(false);
 
-  // Check user state and redirect if needed
+  // Check user state and redirect if needed - only once on initial load
   useEffect(() => {
-    if (isConnected && address) {
+    if (!hasCheckedRedirect && isConnected && address && !isRedirecting) {
       const userRole = getWalletRole(address);
       const userHasProfile = hasProfile(address);
 
-      if (!userRole) {
-        // No role selected, redirect to role selection
-        router.push("/select-role");
-      } else if (!userHasProfile) {
-        // Role selected but no profile, redirect to profile setup
+      // Only redirect if we have complete user data
+      if (userRole && userHasProfile) {
+        if (userRole === "buyer") {
+          router.push("/buyer-home");
+        } else if (userRole === "seller") {
+          router.push("/seller-home");
+        }
+      } else if (userRole && !userHasProfile) {
         router.push("/profile-setup");
-      } else if (userRole === "buyer") {
-        // Buyer with profile, redirect to buyer home
-        router.push("/buyer-home");
-      } else if (userRole === "seller") {
-        // Seller with profile, redirect to marketplace
-        router.push("/seller-home");
+      } else if (!userRole) {
+        router.push("/select-role");
       }
+
+      setHasCheckedRedirect(true);
     }
-  }, [router, isConnected, address, checkAndRedirect]);
+  }, [router, isConnected, address, hasCheckedRedirect, isRedirecting]);
+
+  // Reset the check flag when wallet changes
+  useEffect(() => {
+    setHasCheckedRedirect(false);
+  }, [address]);
 
   // If not connected, show welcome screen
   if (!isConnected) {

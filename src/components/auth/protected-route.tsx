@@ -19,31 +19,56 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const { role, isConnected, checkAndRedirect } = useUserRole();
+  const { role, isConnected, isRedirecting } = useUserRole();
   const { address } = useAccount();
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
+
+  // Debug function to log state
+  const logState = (message: string, data?: any) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[ProtectedRoute] ${message}`, {
+        pathname,
+        address,
+        isConnected,
+        role,
+        requireAuth,
+        requireRole,
+        isRedirecting,
+        ...data,
+      });
+    }
+  };
 
   useEffect(() => {
+    // Skip if we've already checked auth or if we're redirecting
+    if (hasCheckedAuth || isRedirecting) return;
+
     // Public routes that don't require authentication
     const publicRoutes = ["/", "/select-role"];
 
     // Skip protection for profile setup page
     if (pathname === "/profile-setup") {
+      logState(`Profile setup page, allowing access`);
       setIsAuthorized(true);
       setIsLoading(false);
+      setHasCheckedAuth(true);
       return;
     }
 
     // If we're on a public route, allow access
-    if (publicRoutes.includes(pathname)) {
+    if (publicRoutes.includes(pathname || "")) {
+      logState(`Public route, allowing access`);
       setIsAuthorized(true);
       setIsLoading(false);
+      setHasCheckedAuth(true);
       return;
     }
 
     // Check if wallet is connected
     if (requireAuth && !isConnected) {
+      logState(`Auth required but not connected, redirecting to home`);
       router.push("/");
       return;
     }
@@ -54,7 +79,10 @@ export function ProtectedRoute({
       const userRole = getWalletRole(address);
       const userHasProfile = hasProfile(address);
 
+      logState(`Checking auth requirements`, { userRole, userHasProfile });
+
       if (userRole && !userHasProfile && pathname !== "/profile-setup") {
+        logState(`Has role but no profile, redirecting to profile setup`);
         router.push("/profile-setup");
         return;
       }
@@ -63,9 +91,13 @@ export function ProtectedRoute({
       if (requireRole && userRole !== requireRole) {
         // If user has no role, send to role selection
         if (!userRole) {
+          logState(
+            `Specific role required but no role set, redirecting to role selection`
+          );
           router.push("/select-role");
         } else {
           // If user has wrong role, send to home
+          logState(`Wrong role, redirecting to home`);
           router.push("/");
         }
         return;
@@ -73,11 +105,10 @@ export function ProtectedRoute({
     }
 
     // If we get here, user is authorized
+    logState(`User is authorized`);
     setIsAuthorized(true);
     setIsLoading(false);
-
-    // Check and redirect based on user state
-    checkAndRedirect();
+    setHasCheckedAuth(true);
   }, [
     router,
     pathname,
@@ -86,8 +117,14 @@ export function ProtectedRoute({
     role,
     isConnected,
     address,
-    checkAndRedirect,
+    isRedirecting,
+    hasCheckedAuth,
   ]);
+
+  // Reset auth check when path or address changes
+  useEffect(() => {
+    setHasCheckedAuth(false);
+  }, [pathname, address]);
 
   if (isLoading) {
     return (
