@@ -16,6 +16,7 @@ import {
   saveWalletRole,
   hasProfile,
   debugDumpWalletData,
+  walletDataExists,
 } from "@/src/lib/wallet-storage";
 import { toast } from "@/src/components/ui/use-toast";
 
@@ -51,6 +52,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const lastRedirectPath = useRef<string | null>(null);
   const lastRedirectTime = useRef<number>(0);
   const initializationCount = useRef(0);
+  const previousAddress = useRef<string | null>(null);
+  const initialStateSet = useRef(false);
 
   // Get wallet state from wagmi
   const { address, isConnected } = useAccount();
@@ -65,6 +68,8 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         role,
         userHasProfile,
         pathname,
+        previousAddress: previousAddress.current,
+        initialStateSet: initialStateSet.current,
         ...data,
       });
     }
@@ -77,7 +82,22 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
     const initializeState = async () => {
       logState(`Initializing state (${initCount})`);
 
+      // Check if address changed
+      const addressChanged = address !== previousAddress.current;
+      logState(`Address change check`, {
+        addressChanged,
+        current: address,
+        previous: previousAddress.current,
+      });
+
+      // Update previous address reference
+      previousAddress.current = address || null;
+
       if (address) {
+        // Check if wallet data exists
+        const hasData = walletDataExists(address);
+        logState(`Checking if wallet data exists`, { hasData });
+
         // Get role from wallet-specific storage
         const savedRole = getWalletRole(address);
         logState(`Retrieved role from storage`, { savedRole });
@@ -89,11 +109,15 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         // Update state
         setRole(savedRole);
         setUserHasProfile(profileExists);
+
+        // Mark initial state as set
+        initialStateSet.current = true;
       } else {
         // Reset state when wallet disconnects
         logState(`No wallet address, resetting state`);
         setRole(null);
         setUserHasProfile(false);
+        initialStateSet.current = false;
       }
 
       setIsInitialized(true);
@@ -196,7 +220,7 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         targetPath = "/buyer-home";
         logState(`Buyer with profile, redirecting to buyer home`);
       } else if (savedRole === "seller") {
-        targetPath = "/marketplace";
+        targetPath = "/seller-home";
         logState(`Seller with profile, redirecting to marketplace`);
       }
     }

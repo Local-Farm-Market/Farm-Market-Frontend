@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { WalletConnect } from "@/src/components/auth/wallet-connect";
 import { OnboardingGuide } from "@/src/components/auth/onboarding-guide";
 import { ThemeToggle } from "@/src/components/layout/theme-toggle";
@@ -9,31 +9,75 @@ import { Card, CardContent } from "@/src/components/ui/card";
 import { Leaf, Wallet, ShoppingBasket } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
-import { getWalletRole, hasProfile } from "@/src/lib/wallet-storage";
+import {
+  getWalletRole,
+  hasProfile,
+  walletDataExists,
+} from "@/src/lib/wallet-storage";
 
 export default function Home() {
   const router = useRouter();
   const { address, isConnected } = useAccount();
   const { checkAndRedirect, isRedirecting } = useUserRole();
   const [hasCheckedRedirect, setHasCheckedRedirect] = useState(false);
+  const redirectAttempted = useRef(false);
+
+  // Debug function to log state
+  const logState = (message: string, data?: any) => {
+    if (process.env.NODE_ENV === "development") {
+      console.log(`[HomePage] ${message}`, {
+        address,
+        isConnected,
+        hasCheckedRedirect,
+        isRedirecting,
+        redirectAttempted: redirectAttempted.current,
+        ...data,
+      });
+    }
+  };
 
   // Check user state and redirect if needed - only once on initial load
   useEffect(() => {
-    if (!hasCheckedRedirect && isConnected && address && !isRedirecting) {
-      const userRole = getWalletRole(address);
-      const userHasProfile = hasProfile(address);
+    if (
+      !hasCheckedRedirect &&
+      isConnected &&
+      address &&
+      !isRedirecting &&
+      !redirectAttempted.current
+    ) {
+      // Set flag to prevent multiple redirect attempts
+      redirectAttempted.current = true;
 
-      // Only redirect if we have complete user data
-      if (userRole && userHasProfile) {
-        if (userRole === "buyer") {
-          router.push("/buyer-home");
-        } else if (userRole === "seller") {
-          router.push("/seller-home");
+      // Check if wallet data exists
+      const hasData = walletDataExists(address);
+      logState(`Checking if wallet data exists`, { hasData });
+
+      if (hasData) {
+        const userRole = getWalletRole(address);
+        const userHasProfile = hasProfile(address);
+
+        logState(`Checking redirect on home page`, {
+          userRole,
+          userHasProfile,
+        });
+
+        // Only redirect if we have complete user data
+        if (userRole && userHasProfile) {
+          logState(`User has role and profile, redirecting to dashboard`);
+          if (userRole === "buyer") {
+            router.push("/buyer-home");
+          } else if (userRole === "seller") {
+            router.push("/seller-home");
+          }
+        } else if (userRole && !userHasProfile) {
+          logState(
+            `User has role but no profile, redirecting to profile setup`
+          );
+          router.push("/profile-setup");
+        } else if (!userRole) {
+          logState(`No role found, redirecting to role selection`);
+          router.push("/select-role");
         }
-      } else if (userRole && !userHasProfile) {
-        router.push("/profile-setup");
-      } else if (!userRole) {
-        router.push("/select-role");
       }
 
       setHasCheckedRedirect(true);
@@ -42,7 +86,11 @@ export default function Home() {
 
   // Reset the check flag when wallet changes
   useEffect(() => {
-    setHasCheckedRedirect(false);
+    if (!address) {
+      setHasCheckedRedirect(false);
+      redirectAttempted.current = false;
+      logState(`Wallet disconnected, resetting redirect flags`);
+    }
   }, [address]);
 
   // If not connected, show welcome screen

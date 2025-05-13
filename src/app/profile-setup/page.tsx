@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Card,
   CardContent,
@@ -17,7 +17,11 @@ import { Textarea } from "@/src/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import { useUserRole } from "@/src/hooks/use-user-role";
 import { useAccount } from "wagmi";
-import { saveWalletProfile, getWalletRole } from "@/src/lib/wallet-storage";
+import {
+  saveWalletProfile,
+  getWalletRole,
+  hasProfile,
+} from "@/src/lib/wallet-storage";
 import { toast } from "@/src/components/ui/use-toast";
 
 export default function ProfileSetupPage() {
@@ -28,6 +32,7 @@ export default function ProfileSetupPage() {
   const router = useRouter();
   const { role, setRole } = useUserRole();
   const { address, isConnected } = useAccount();
+  const redirectAttempted = useRef(false);
 
   // Debug function to log state
   const logState = (message: string, data?: any) => {
@@ -36,6 +41,7 @@ export default function ProfileSetupPage() {
         address,
         isConnected,
         role,
+        redirectAttempted: redirectAttempted.current,
         ...data,
       });
     }
@@ -49,18 +55,48 @@ export default function ProfileSetupPage() {
       return;
     }
 
-    // Check if role is selected
-    const savedRole = getWalletRole(address);
-    if (!savedRole) {
-      logState(`No role selected, redirecting to role selection`);
-      router.push("/select-role");
-      return;
-    }
+    // Check if user already has a profile
+    if (!redirectAttempted.current) {
+      redirectAttempted.current = true;
 
-    // If role is not in context, set it
-    if (!role && savedRole) {
-      logState(`Setting role from storage`, { savedRole });
-      setRole(savedRole);
+      const savedRole = getWalletRole(address);
+      const userHasProfile = hasProfile(address);
+
+      logState(`Checking existing role and profile`, {
+        savedRole,
+        userHasProfile,
+      });
+
+      // If user already has a profile, redirect to appropriate dashboard
+      if (savedRole && userHasProfile) {
+        logState(`User already has profile, redirecting to dashboard`);
+
+        // Update context if needed
+        if (!role && savedRole) {
+          setRole(savedRole);
+        }
+
+        // Redirect based on role
+        if (savedRole === "buyer") {
+          router.push("/buyer-home");
+        } else if (savedRole === "seller") {
+          router.push("/seller-home");
+        }
+        return;
+      }
+
+      // Check if role is selected
+      if (!savedRole) {
+        logState(`No role selected, redirecting to role selection`);
+        router.push("/select-role");
+        return;
+      }
+
+      // If role is not in context, set it
+      if (!role && savedRole) {
+        logState(`Setting role from storage`, { savedRole });
+        setRole(savedRole);
+      }
     }
   }, [router, isConnected, address, role, setRole]);
 
@@ -112,7 +148,7 @@ export default function ProfileSetupPage() {
       if (userRole === "buyer") {
         router.push("/buyer-home");
       } else if (userRole === "seller") {
-        router.push("/marketplace");
+        router.push("/seller-home");
       } else {
         // Fallback to home if role is somehow not set
         router.push("/");

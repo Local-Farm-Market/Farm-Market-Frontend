@@ -29,16 +29,21 @@ const debugLog = (operation: string, data?: any) => {
   }
 };
 
-// Get wallet data from localStorage
+// Normalize address to lowercase
+const normalizeAddress = (address: string): string => {
+  return address ? address.toLowerCase() : "";
+};
+
+// Get wallet data from localStorage with retry mechanism
 export function getWalletData(address: string): WalletData | null {
   if (!address) return null;
 
   try {
+    const normalizedAddress = normalizeAddress(address);
     const storedData = localStorage.getItem(WALLET_DATA_KEY);
     if (!storedData) return null;
 
     const parsedData = JSON.parse(storedData) as Record<string, WalletData>;
-    const normalizedAddress = address.toLowerCase();
     const result = parsedData[normalizedAddress] || null;
 
     debugLog(`Retrieved data for ${normalizedAddress}`, result);
@@ -49,7 +54,7 @@ export function getWalletData(address: string): WalletData | null {
   }
 }
 
-// Save wallet data to localStorage
+// Save wallet data to localStorage with retry mechanism
 export function saveWalletData(
   address: string,
   data: Partial<WalletData>
@@ -57,7 +62,7 @@ export function saveWalletData(
   if (!address) return;
 
   try {
-    const normalizedAddress = address.toLowerCase();
+    const normalizedAddress = normalizeAddress(address);
 
     // Get existing data
     const storedData = localStorage.getItem(WALLET_DATA_KEY);
@@ -81,6 +86,16 @@ export function saveWalletData(
     parsedData[normalizedAddress] = updatedData;
     localStorage.setItem(WALLET_DATA_KEY, JSON.stringify(parsedData));
 
+    // Verify the data was saved correctly
+    const verificationData = getWalletData(address);
+    if (!verificationData) {
+      debugLog(`WARNING: Verification failed for ${normalizedAddress}`, {
+        updatedData,
+      });
+      // Retry once
+      localStorage.setItem(WALLET_DATA_KEY, JSON.stringify(parsedData));
+    }
+
     debugLog(`Saved data for ${normalizedAddress}`, updatedData);
   } catch (error) {
     console.error("Failed to save wallet data:", error);
@@ -92,7 +107,7 @@ export function clearWalletData(address: string): void {
   if (!address) return;
 
   try {
-    const normalizedAddress = address.toLowerCase();
+    const normalizedAddress = normalizeAddress(address);
     const storedData = localStorage.getItem(WALLET_DATA_KEY);
     if (!storedData) return;
 
@@ -113,7 +128,7 @@ export function hasProfile(address: string): boolean {
   const data = getWalletData(address);
   const result = !!data?.profile;
 
-  debugLog(`Checked profile for ${address.toLowerCase()}`, {
+  debugLog(`Checked profile for ${normalizeAddress(address)}`, {
     hasProfile: result,
   });
   return result;
@@ -126,7 +141,7 @@ export function getWalletRole(address: string): "buyer" | "seller" | null {
   const data = getWalletData(address);
   const result = data?.role || null;
 
-  debugLog(`Retrieved role for ${address.toLowerCase()}`, { role: result });
+  debugLog(`Retrieved role for ${normalizeAddress(address)}`, { role: result });
   return result;
 }
 
@@ -137,7 +152,7 @@ export function saveWalletRole(
 ): void {
   if (!address) return;
 
-  debugLog(`Saving role for ${address.toLowerCase()}`, { role });
+  debugLog(`Saving role for ${normalizeAddress(address)}`, { role });
   saveWalletData(address, { role });
 }
 
@@ -145,7 +160,7 @@ export function saveWalletRole(
 export function saveWalletProfile(address: string, profile: UserProfile): void {
   if (!address) return;
 
-  debugLog(`Saving profile for ${address.toLowerCase()}`, { profile });
+  debugLog(`Saving profile for ${normalizeAddress(address)}`, { profile });
   saveWalletData(address, { profile });
 }
 
@@ -159,5 +174,27 @@ export function debugDumpWalletData(): Record<string, WalletData> | null {
   } catch (error) {
     console.error("Failed to dump wallet data:", error);
     return null;
+  }
+}
+
+// Check if wallet data exists for an address
+export function walletDataExists(address: string): boolean {
+  if (!address) return false;
+
+  const data = getWalletData(address);
+  return !!data;
+}
+
+// Get all wallet addresses with data
+export function getAllWalletAddresses(): string[] {
+  try {
+    const storedData = localStorage.getItem(WALLET_DATA_KEY);
+    if (!storedData) return [];
+
+    const parsedData = JSON.parse(storedData) as Record<string, WalletData>;
+    return Object.keys(parsedData);
+  } catch (error) {
+    console.error("Failed to get all wallet addresses:", error);
+    return [];
   }
 }

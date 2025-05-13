@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/src/components/ui/button";
 import { LogOut, Copy, ExternalLink, Check, Wallet } from "lucide-react";
 import {
@@ -15,7 +15,11 @@ import { Badge } from "@/src/components/ui/badge";
 import { toast } from "@/src/components/ui/use-toast";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useDisconnect } from "wagmi";
-import { getWalletRole, clearWalletData } from "@/src/lib/wallet-storage";
+import {
+  getWalletRole,
+  hasProfile,
+  walletDataExists,
+} from "@/src/lib/wallet-storage";
 import { useUserRole } from "@/src/hooks/use-user-role";
 
 export type UserRole = "buyer" | "seller" | null;
@@ -28,7 +32,9 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [copied, setCopied] = useState(false);
   const [localRole, setLocalRole] = useState<UserRole>(null);
+  const [isInitialConnection, setIsInitialConnection] = useState(true);
   const router = useRouter();
+  const initialRedirectDone = useRef(false);
 
   // Get role from context
   const { role: contextRole, setRole: setContextRole } = useUserRole();
@@ -45,6 +51,8 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
         isConnected,
         localRole,
         contextRole,
+        isInitialConnection,
+        initialRedirectDone: initialRedirectDone.current,
         ...data,
       });
     }
@@ -87,30 +95,109 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
     }
   }, [address, contextRole, setContextRole, onRoleSelect]);
 
-  // Watch for wallet connection changes
+  // Handle wallet connection/reconnection
   useEffect(() => {
-    if (isConnected && address) {
-      logState(`Wallet connected`);
+    // Skip if no address or not connected
+    if (!isConnected || !address) {
+      logState(`Not connected or no address, skipping connection handler`);
+      return;
+    }
 
-      // If user hasn't selected a role yet, redirect to role selection
+    // Check if this is a reconnection (wallet data exists)
+    const hasExistingData = walletDataExists(address);
+    logState(`Checking for existing wallet data`, { hasExistingData });
+
+    // If this is a reconnection and we haven't done the initial redirect yet
+    if (hasExistingData && !initialRedirectDone.current) {
+      logState(`Reconnection detected, checking existing data`);
+
+      // Check if user has existing role and profile
       const savedRole = getWalletRole(address);
-      if (!savedRole) {
+      const userHasProfile = hasProfile(address);
+
+      logState(`Checking existing data on reconnection`, {
+        savedRole,
+        userHasProfile,
+      });
+
+      // If user has role and profile, redirect to appropriate dashboard
+      if (savedRole && userHasProfile) {
+        logState(`User has role and profile, redirecting to dashboard`);
+
+        // Update context and local state
+        setLocalRole(savedRole);
+        setContextRole(savedRole);
+
+        if (onRoleSelect) {
+          onRoleSelect(savedRole);
+        }
+
+        // Set flag to prevent multiple redirects
+        initialRedirectDone.current = true;
+
+        // Redirect based on role
+        if (savedRole === "buyer") {
+          router.push("/buyer-home");
+        } else if (savedRole === "seller") {
+          router.push("/seller-home");
+        }
+      }
+      // If user has role but no profile, redirect to profile setup
+      else if (savedRole && !userHasProfile) {
+        logState(`User has role but no profile, redirecting to profile setup`);
+
+        // Update context and local state
+        setLocalRole(savedRole);
+        setContextRole(savedRole);
+
+        if (onRoleSelect) {
+          onRoleSelect(savedRole);
+        }
+
+        // Set flag to prevent multiple redirects
+        initialRedirectDone.current = true;
+
+        router.push("/profile-setup");
+      }
+      // If user has no role, redirect to role selection
+      else if (!savedRole) {
         logState(`No role found, redirecting to role selection`);
+
+        // Set flag to prevent multiple redirects
+        initialRedirectDone.current = true;
+
         router.push("/select-role");
       }
     }
-  }, [isConnected, address, router]);
+    // If this is a new connection (no existing data)
+    else if (!hasExistingData) {
+      logState(`New connection detected, redirecting to role selection`);
+
+      // Set flag to prevent multiple redirects
+      initialRedirectDone.current = true;
+
+      router.push("/select-role");
+    }
+
+    // No longer initial connection
+    setIsInitialConnection(false);
+  }, [isConnected, address, router, setContextRole, onRoleSelect]);
+
+  // Reset redirect flag when wallet changes
+  useEffect(() => {
+    if (!address) {
+      initialRedirectDone.current = false;
+      setIsInitialConnection(true);
+      logState(`Wallet disconnected, resetting redirect flags`);
+    }
+  }, [address]);
 
   const disconnectWallet = async () => {
     try {
       logState(`Disconnecting wallet`);
 
-      // Clear wallet data before disconnecting
-      if (address) {
-        clearWalletData(address);
-      }
-
-      // Disconnect wallet
+      // DO NOT clear wallet data on disconnect - we want to preserve it for reconnection
+      // Just disconnect the wallet
       disconnect();
 
       // Update local state
@@ -119,6 +206,10 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
 
       // Update context
       setContextRole(null);
+
+      // Reset redirect flags
+      initialRedirectDone.current = false;
+      setIsInitialConnection(true);
 
       if (onRoleSelect) {
         onRoleSelect(null);
