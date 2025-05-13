@@ -34,7 +34,7 @@ const normalizeAddress = (address: string): string => {
   return address ? address.toLowerCase() : "";
 };
 
-// Get wallet data from localStorage with retry mechanism
+// Get wallet data from localStorage
 export function getWalletData(address: string): WalletData | null {
   if (!address) return null;
 
@@ -54,7 +54,7 @@ export function getWalletData(address: string): WalletData | null {
   }
 }
 
-// Save wallet data to localStorage with retry mechanism
+// Save wallet data to localStorage
 export function saveWalletData(
   address: string,
   data: Partial<WalletData>
@@ -85,16 +85,6 @@ export function saveWalletData(
     // Save back to storage
     parsedData[normalizedAddress] = updatedData;
     localStorage.setItem(WALLET_DATA_KEY, JSON.stringify(parsedData));
-
-    // Verify the data was saved correctly
-    const verificationData = getWalletData(address);
-    if (!verificationData) {
-      debugLog(`WARNING: Verification failed for ${normalizedAddress}`, {
-        updatedData,
-      });
-      // Retry once
-      localStorage.setItem(WALLET_DATA_KEY, JSON.stringify(parsedData));
-    }
 
     debugLog(`Saved data for ${normalizedAddress}`, updatedData);
   } catch (error) {
@@ -174,27 +164,5 @@ export function debugDumpWalletData(): Record<string, WalletData> | null {
   } catch (error) {
     console.error("Failed to dump wallet data:", error);
     return null;
-  }
-}
-
-// Check if wallet data exists for an address
-export function walletDataExists(address: string): boolean {
-  if (!address) return false;
-
-  const data = getWalletData(address);
-  return !!data;
-}
-
-// Get all wallet addresses with data
-export function getAllWalletAddresses(): string[] {
-  try {
-    const storedData = localStorage.getItem(WALLET_DATA_KEY);
-    if (!storedData) return [];
-
-    const parsedData = JSON.parse(storedData) as Record<string, WalletData>;
-    return Object.keys(parsedData);
-  } catch (error) {
-    console.error("Failed to get all wallet addresses:", error);
-    return [];
   }
 }

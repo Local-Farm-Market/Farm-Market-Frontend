@@ -16,7 +16,6 @@ import {
   saveWalletRole,
   hasProfile,
   debugDumpWalletData,
-  walletDataExists,
 } from "@/src/lib/wallet-storage";
 import { toast } from "@/src/components/ui/use-toast";
 
@@ -53,7 +52,6 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
   const lastRedirectTime = useRef<number>(0);
   const initializationCount = useRef(0);
   const previousAddress = useRef<string | null>(null);
-  const initialStateSet = useRef(false);
 
   // Get wallet state from wagmi
   const { address, isConnected } = useAccount();
@@ -69,7 +67,6 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         userHasProfile,
         pathname,
         previousAddress: previousAddress.current,
-        initialStateSet: initialStateSet.current,
         ...data,
       });
     }
@@ -94,10 +91,6 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
       previousAddress.current = address || null;
 
       if (address) {
-        // Check if wallet data exists
-        const hasData = walletDataExists(address);
-        logState(`Checking if wallet data exists`, { hasData });
-
         // Get role from wallet-specific storage
         const savedRole = getWalletRole(address);
         logState(`Retrieved role from storage`, { savedRole });
@@ -110,14 +103,18 @@ export function UserRoleProvider({ children }: { children: ReactNode }) {
         setRole(savedRole);
         setUserHasProfile(profileExists);
 
-        // Mark initial state as set
-        initialStateSet.current = true;
+        // If address changed and we have complete user data, redirect to appropriate dashboard
+        if (addressChanged && savedRole && profileExists) {
+          logState(
+            `Address changed with complete user data, will redirect to dashboard`
+          );
+          // We'll handle the actual redirect in the connection effect in WalletConnect
+        }
       } else {
         // Reset state when wallet disconnects
         logState(`No wallet address, resetting state`);
         setRole(null);
         setUserHasProfile(false);
-        initialStateSet.current = false;
       }
 
       setIsInitialized(true);

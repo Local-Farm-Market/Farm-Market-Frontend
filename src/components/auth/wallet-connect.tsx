@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/src/components/ui/button";
 import { LogOut, Copy, ExternalLink, Check, Wallet } from "lucide-react";
 import {
@@ -15,11 +15,7 @@ import { Badge } from "@/src/components/ui/badge";
 import { toast } from "@/src/components/ui/use-toast";
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { useAccount, useDisconnect } from "wagmi";
-import {
-  getWalletRole,
-  hasProfile,
-  walletDataExists,
-} from "@/src/lib/wallet-storage";
+import { getWalletRole, hasProfile } from "@/src/lib/wallet-storage";
 import { useUserRole } from "@/src/hooks/use-user-role";
 
 export type UserRole = "buyer" | "seller" | null;
@@ -32,9 +28,7 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
   const [showWalletDetails, setShowWalletDetails] = useState(false);
   const [copied, setCopied] = useState(false);
   const [localRole, setLocalRole] = useState<UserRole>(null);
-  const [isInitialConnection, setIsInitialConnection] = useState(true);
   const router = useRouter();
-  const initialRedirectDone = useRef(false);
 
   // Get role from context
   const { role: contextRole, setRole: setContextRole } = useUserRole();
@@ -51,8 +45,6 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
         isConnected,
         localRole,
         contextRole,
-        isInitialConnection,
-        initialRedirectDone: initialRedirectDone.current,
         ...data,
       });
     }
@@ -95,27 +87,16 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
     }
   }, [address, contextRole, setContextRole, onRoleSelect]);
 
-  // Handle wallet connection/reconnection
+  // Watch for wallet connection changes
   useEffect(() => {
-    // Skip if no address or not connected
-    if (!isConnected || !address) {
-      logState(`Not connected or no address, skipping connection handler`);
-      return;
-    }
-
-    // Check if this is a reconnection (wallet data exists)
-    const hasExistingData = walletDataExists(address);
-    logState(`Checking for existing wallet data`, { hasExistingData });
-
-    // If this is a reconnection and we haven't done the initial redirect yet
-    if (hasExistingData && !initialRedirectDone.current) {
-      logState(`Reconnection detected, checking existing data`);
+    if (isConnected && address) {
+      logState(`Wallet connected`);
 
       // Check if user has existing role and profile
       const savedRole = getWalletRole(address);
       const userHasProfile = hasProfile(address);
 
-      logState(`Checking existing data on reconnection`, {
+      logState(`Checking existing data on connection`, {
         savedRole,
         userHasProfile,
       });
@@ -131,9 +112,6 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
         if (onRoleSelect) {
           onRoleSelect(savedRole);
         }
-
-        // Set flag to prevent multiple redirects
-        initialRedirectDone.current = true;
 
         // Redirect based on role
         if (savedRole === "buyer") {
@@ -154,43 +132,15 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
           onRoleSelect(savedRole);
         }
 
-        // Set flag to prevent multiple redirects
-        initialRedirectDone.current = true;
-
         router.push("/profile-setup");
       }
       // If user has no role, redirect to role selection
       else if (!savedRole) {
         logState(`No role found, redirecting to role selection`);
-
-        // Set flag to prevent multiple redirects
-        initialRedirectDone.current = true;
-
         router.push("/select-role");
       }
     }
-    // If this is a new connection (no existing data)
-    else if (!hasExistingData) {
-      logState(`New connection detected, redirecting to role selection`);
-
-      // Set flag to prevent multiple redirects
-      initialRedirectDone.current = true;
-
-      router.push("/select-role");
-    }
-
-    // No longer initial connection
-    setIsInitialConnection(false);
   }, [isConnected, address, router, setContextRole, onRoleSelect]);
-
-  // Reset redirect flag when wallet changes
-  useEffect(() => {
-    if (!address) {
-      initialRedirectDone.current = false;
-      setIsInitialConnection(true);
-      logState(`Wallet disconnected, resetting redirect flags`);
-    }
-  }, [address]);
 
   const disconnectWallet = async () => {
     try {
@@ -200,20 +150,16 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
       // Just disconnect the wallet
       disconnect();
 
-      // Update local state
-      setLocalRole(null);
-      setShowWalletDetails(false);
+      // // Update local state
+      // setLocalRole(null);
+      // setShowWalletDetails(false);
 
-      // Update context
-      setContextRole(null);
+      // // Update context
+      // setContextRole(null);
 
-      // Reset redirect flags
-      initialRedirectDone.current = false;
-      setIsInitialConnection(true);
-
-      if (onRoleSelect) {
-        onRoleSelect(null);
-      }
+      // if (onRoleSelect) {
+      //   onRoleSelect(null);
+      // }
 
       toast({
         title: "Wallet Disconnected",
