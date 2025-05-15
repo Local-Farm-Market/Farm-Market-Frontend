@@ -112,13 +112,6 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
         if (onRoleSelect) {
           onRoleSelect(savedRole);
         }
-
-        // Redirect based on role
-        if (savedRole === "buyer") {
-          router.push("/buyer-home");
-        } else if (savedRole === "seller") {
-          router.push("/seller-home");
-        }
       }
       // If user has role but no profile, redirect to profile setup
       else if (savedRole && !userHasProfile) {
