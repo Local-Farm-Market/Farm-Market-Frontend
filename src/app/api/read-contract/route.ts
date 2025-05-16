@@ -1,20 +1,20 @@
-import { type NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
-import { mainnet, baseSepolia } from "viem/chains";
+import { baseSepolia } from "viem/chains";
 
-// Create a public client
-const client = createPublicClient({
-  chain: process.env.NEXT_PUBLIC_CHAIN_ID === "1" ? mainnet : baseSepolia,
+// Create a public client for reading from the blockchain
+const publicClient = createPublicClient({
+  chain: baseSepolia,
   transport: http(),
 });
 
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
     const { address, abi, functionName, args } = await request.json();
 
-    // Call the contract
-    const result = await client.readContract({
-      address,
+    // Call the contract function
+    const result = await publicClient.readContract({
+      address: address as `0x${string}`,
       abi,
       functionName,
       args,

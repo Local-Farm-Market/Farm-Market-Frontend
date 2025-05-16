@@ -2,147 +2,177 @@
 
 import type React from "react";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { useCartContract } from "./use-cart-contract";
+import { useProducts } from "./use-products";
+import type { FormattedCartItem } from "@/src/lib/types";
 import { useToast } from "@/src/hooks/use-toast";
 
-export interface CartItem {
-  id: string;
-  title: string;
-  price: number;
-  image: string;
-  quantity: number;
-  sellerId: string;
-  sellerName: string;
-}
-
 interface CartContextType {
-  items: CartItem[];
-  addItem: (item: Omit<CartItem, "quantity">) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  clearCart: () => void;
+  items: FormattedCartItem[];
+  addItem: (productId: string, quantity: number) => Promise<void>;
+  removeItem: (productId: string) => Promise<void>;
+  updateQuantity: (productId: string, quantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
+  createOrder: (shippingAddress: string) => Promise<void>;
   itemCount: number;
   subtotal: number;
   tax: number;
   total: number;
+  isLoading: boolean;
+  isPending: boolean;
 }
-
-const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const TAX_RATE = 0.08; // 8% tax rate
 
+const CartContext = createContext<CartContextType | undefined>(undefined);
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>([]);
   const { toast } = useToast();
+  const {
+    cartItems,
+    cartTotal,
+    isLoading,
+    isPending,
+    addToCart,
+    updateCartItemQuantity,
+    removeFromCart,
+    clearCart: clearContractCart,
+    createOrderFromCart,
+  } = useCartContract();
+  const { fetchProductById } = useProducts();
 
-  // Load cart from localStorage on mount
+  const [formattedItems, setFormattedItems] = useState<FormattedCartItem[]>([]);
+
+  // Load cart items and format them
   useEffect(() => {
-    const savedCart = localStorage.getItem("farmMarketplaceCart");
-    if (savedCart) {
-      try {
-        setItems(JSON.parse(savedCart));
-      } catch (error) {
-        console.error("Failed to parse cart from localStorage:", error);
-      }
-    }
-  }, []);
+    const loadCartItems = async () => {
+      if (!cartItems || !Array.isArray(cartItems)) return;
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    localStorage.setItem("farmMarketplaceCart", JSON.stringify(items));
-  }, [items]);
+      const formattedCartPromises = cartItems.map(async (item) => {
+        const product = await fetchProductById(item.productId.toString());
+        return {
+          productId: item.productId.toString(),
+          quantity: Number(item.quantity),
+          product: product || undefined, // Convert null to undefined to match FormattedCartItem type
+        };
+      });
 
-  const itemCount = items.reduce((count, item) => count + item.quantity, 0);
+      const formattedCart = await Promise.all(formattedCartPromises);
+      // Filter out items with undefined products
+      const validItems = formattedCart.filter(
+        (item): item is FormattedCartItem => item.product !== undefined
+      );
+      setFormattedItems(validItems);
+    };
 
-  const subtotal = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
+    loadCartItems();
+  }, [cartItems, fetchProductById]);
+
+  // Calculate cart metrics
+  const itemCount = formattedItems.reduce(
+    (count, item) => count + item.quantity,
     0
   );
+  const subtotal = cartTotal ? Number(cartTotal) / 1e18 : 0;
   const tax = subtotal * TAX_RATE;
   const total = subtotal + tax;
 
-  const addItem = (newItem: Omit<CartItem, "quantity">) => {
-    setItems((currentItems) => {
-      // Check if item already exists in cart
-      const existingItemIndex = currentItems.findIndex(
-        (item) => item.id === newItem.id
-      );
-
-      if (existingItemIndex > -1) {
-        // Update quantity of existing item
-        const updatedItems = [...currentItems];
-        updatedItems[existingItemIndex].quantity += 1;
-
-        toast({
-          title: "Item quantity updated",
-          description: `${newItem.title} quantity increased to ${updatedItems[existingItemIndex].quantity}`,
-          variant: "default",
-        });
-
-        return updatedItems;
-      } else {
-        // Add new item with quantity 1
-        toast({
-          title: "Item added to cart",
-          description: `${newItem.title} added to your cart`,
-          variant: "default",
-        });
-
-        return [...currentItems, { ...newItem, quantity: 1 }];
-      }
-    });
-  };
-
-  const removeItem = (id: string) => {
-    setItems((currentItems) => {
-      const itemToRemove = currentItems.find((item) => item.id === id);
-
-      if (itemToRemove) {
-        toast({
-          title: "Item removed",
-          description: `${itemToRemove.title} removed from your cart`,
-          variant: "destructive",
-        });
-      }
-
-      return currentItems.filter((item) => item.id !== id);
-    });
-  };
-
-  const updateQuantity = (id: string, quantity: number) => {
-    if (quantity < 1) {
-      removeItem(id);
-      return;
+  // Add item to cart
+  const addItem = async (productId: string, quantity = 1) => {
+    try {
+      await addToCart(BigInt(productId), BigInt(quantity));
+    } catch (error) {
+      console.error("Error adding item to cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
     }
-
-    setItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === id ? { ...item, quantity } : item
-      )
-    );
   };
 
-  const clearCart = () => {
-    setItems([]);
-    toast({
-      title: "Cart cleared",
-      description: "All items have been removed from your cart",
-      variant: "default",
-    });
+  // Remove item from cart
+  const removeItem = async (productId: string) => {
+    try {
+      await removeFromCart(BigInt(productId));
+    } catch (error) {
+      console.error("Error removing item from cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to remove item from cart. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Update item quantity
+  const updateQuantity = async (productId: string, quantity: number) => {
+    try {
+      if (quantity < 1) {
+        await removeFromCart(BigInt(productId));
+        return;
+      }
+
+      await updateCartItemQuantity(BigInt(productId), BigInt(quantity));
+    } catch (error) {
+      console.error("Error updating item quantity:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update item quantity. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Clear cart
+  const clearCart = async () => {
+    try {
+      await clearContractCart();
+    } catch (error) {
+      console.error("Error clearing cart:", error);
+      toast({
+        title: "Error",
+        description: "Failed to clear cart. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Create order from cart
+  const createOrder = async (shippingAddress: string) => {
+    try {
+      await createOrderFromCart(shippingAddress);
+      toast({
+        title: "Order created",
+        description: "Your order has been created successfully.",
+      });
+    } catch (error) {
+      console.error("Error creating order:", error);
+      toast({
+        title: "Error",
+        description: "Failed to create order. Please try again.",
+        variant: "destructive",
+      });
+      throw error; // Re-throw to allow handling in the checkout page
+    }
   };
 
   return (
     <CartContext.Provider
       value={{
-        items,
+        items: formattedItems,
         addItem,
         removeItem,
         updateQuantity,
         clearCart,
+        createOrder,
         itemCount,
         subtotal,
         tax,
         total,
+        isLoading,
+        isPending,
       }}
     >
       {children}

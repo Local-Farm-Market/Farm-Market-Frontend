@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SearchBar } from "@/src/components/home/search-bar";
 import { ProductFilters } from "@/src/components/home/product-filters";
 import { ProductCard } from "@/src/components/product/product-card";
@@ -18,99 +18,41 @@ import {
   SheetTrigger,
 } from "@/src/components/ui/sheet";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
-
-// Mock product data
-const mockProducts = [
-  {
-    id: "1",
-    title: "Fresh Organic Tomatoes",
-    price: 3.99,
-    image: "/placeholder.svg?height=400&width=400",
-    location: "Green Valley Farm, CA",
-    available: true,
-    category: "Vegetables",
-    distance: 5.2,
-  },
-  {
-    id: "2",
-    title: "Grass-Fed Beef",
-    price: 12.99,
-    image: "/placeholder.svg?height=400&width=400",
-    location: "Sunset Ranch, TX",
-    available: true,
-    category: "Meat",
-    distance: 8.7,
-  },
-  {
-    id: "3",
-    title: "Organic Free-Range Eggs",
-    price: 5.49,
-    image: "/placeholder.svg?height=400&width=400",
-    location: "Happy Hen Farm, OR",
-    available: true,
-    category: "Poultry",
-    distance: 3.1,
-  },
-  {
-    id: "4",
-    title: "Fresh Strawberries",
-    price: 4.99,
-    image: "/placeholder.svg?height=400&width=400",
-    location: "Berry Fields, WA",
-    available: false,
-    category: "Fruits",
-    distance: 12.4,
-  },
-  {
-    id: "5",
-    title: "Artisanal Goat Cheese",
-    price: 8.99,
-    image: "/placeholder.svg?height=400&width=400",
-    location: "Mountain Dairy, VT",
-    available: true,
-    category: "Dairy",
-    distance: 15.8,
-  },
-  {
-    id: "6",
-    title: "Organic Quinoa",
-    price: 6.99,
-    image: "/placeholder.svg?height=400&width=400",
-    location: "Golden Fields, ID",
-    available: true,
-    category: "Grains",
-    distance: 7.3,
-  },
-  {
-    id: "7",
-    title: "Fresh Apples",
-    price: 2.99,
-    image: "/placeholder.svg?height=400&width=400",
-    location: "Apple Orchard, NY",
-    available: true,
-    category: "Fruits",
-    distance: 4.5,
-  },
-  {
-    id: "8",
-    title: "Organic Honey",
-    price: 9.99,
-    image: "/placeholder.svg?height=400&width=400",
-    location: "Bee Haven, GA",
-    available: true,
-    category: "Other",
-    distance: 6.2,
-  },
-];
+import { DashboardHeader } from "@/src/components/layout/dashboard-header";
+import { useProducts } from "@/src/hooks/use-products";
+import type { FormattedProduct } from "@/src/lib/types";
 
 export default function MarketplacePage() {
-  const [filteredProducts, setFilteredProducts] = useState(mockProducts);
+  const { fetchAllProducts, isLoading: productsLoading } = useProducts();
+  const [products, setProducts] = useState<FormattedProduct[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<FormattedProduct[]>(
+    []
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState("All");
   const [priceRange, setPriceRange] = useState([0, 20]);
   const [maxDistance, setMaxDistance] = useState(20);
   const [organicOnly, setOrganicOnly] = useState(false);
   const [availableOnly, setAvailableOnly] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch all products on component mount
+  useEffect(() => {
+    const loadProducts = async () => {
+      setLoading(true);
+      try {
+        const allProducts = await fetchAllProducts();
+        setProducts(allProducts);
+        setFilteredProducts(allProducts);
+      } catch (error) {
+        console.error("Error loading products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProducts();
+  }, [fetchAllProducts]);
 
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -144,14 +86,15 @@ export default function MarketplacePage() {
     organic: boolean,
     available: boolean
   ) => {
-    let filtered = mockProducts;
+    let filtered = [...products];
 
     // Apply search query filter
     if (query) {
       filtered = filtered.filter(
         (product) =>
-          product.title.toLowerCase().includes(query.toLowerCase()) ||
-          product.location.toLowerCase().includes(query.toLowerCase())
+          product.name.toLowerCase().includes(query.toLowerCase()) ||
+          (product.location &&
+            product.location.toLowerCase().includes(query.toLowerCase()))
       );
     }
 
@@ -165,21 +108,16 @@ export default function MarketplacePage() {
       (product) => product.price >= price[0] && product.price <= price[1]
     );
 
-    // Apply distance filter
-    filtered = filtered.filter((product) => product.distance <= distance);
-
     // Apply organic filter
     if (organic) {
-      filtered = filtered.filter(
-        (product) =>
-          product.category === "Organic" ||
-          product.title.toLowerCase().includes("organic")
-      );
+      filtered = filtered.filter((product) => product.isOrganic);
     }
 
     // Apply availability filter
     if (available) {
-      filtered = filtered.filter((product) => product.available);
+      filtered = filtered.filter(
+        (product) => product.isAvailable && Number(product.stockQuantity) > 0
+      );
     }
 
     setFilteredProducts(filtered);
@@ -236,7 +174,7 @@ export default function MarketplacePage() {
   return (
     <ProtectedRoute requireAuth={true} requireRole="buyer">
       <div className="py-6">
-        <h1 className="text-2xl font-bold mb-6">Marketplace</h1>
+        <DashboardHeader title="Marketplace" />
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1">
@@ -341,10 +279,14 @@ export default function MarketplacePage() {
 
         <ProductFilters onFilterChange={handleFilterChange} />
 
-        {filteredProducts.length > 0 ? (
+        {loading || productsLoading ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Loading products...</p>
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
             {filteredProducts.map((product) => (
-              <ProductCard key={product.id} {...product} />
+              <ProductCard key={product.id} product={product} />
             ))}
           </div>
         ) : (
@@ -362,7 +304,7 @@ export default function MarketplacePage() {
                 setMaxDistance(20);
                 setOrganicOnly(false);
                 setAvailableOnly(false);
-                setFilteredProducts(mockProducts);
+                setFilteredProducts(products);
               }}
             >
               Reset Filters

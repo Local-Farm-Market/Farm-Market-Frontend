@@ -5,16 +5,10 @@ import { ShoppingCart, Check } from "lucide-react";
 import { Button } from "@/src/components/ui/button";
 import { useCart } from "@/src/hooks/use-cart";
 import { useUserRole } from "@/src/hooks/use-user-role";
+import type { FormattedProduct } from "@/src/lib/types";
 
 interface AddToCartButtonProps {
-  product: {
-    id: string;
-    title: string;
-    price: number;
-    image: string;
-    sellerId: string;
-    sellerName: string;
-  };
+  product: FormattedProduct;
   variant?: "default" | "outline" | "secondary";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
@@ -35,8 +29,8 @@ export function AddToCartButton({
     return null;
   }
 
-  const handleAddToCart = () => {
-    addItem(product);
+  const handleAddToCart = async () => {
+    await addItem(product.id, 1);
     setIsAdded(true);
 
     // Reset the button after 1.5 seconds
@@ -53,7 +47,9 @@ export function AddToCartButton({
       className={`${className} ${
         isAdded ? "bg-green-600 hover:bg-green-700" : ""
       }`}
-      disabled={isAdded}
+      disabled={
+        isAdded || !product.isAvailable || Number(product.stockQuantity) === 0
+      }
     >
       {isAdded ? (
         <>

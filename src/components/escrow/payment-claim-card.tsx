@@ -1,102 +1,81 @@
 "use client";
 
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
-import { Card, CardContent } from "@/src/components/ui/card";
-import { ArrowDownLeft, Clock, CheckCircle, ExternalLink } from "lucide-react";
+import { useEscrow } from "@/src/hooks/use-escrow";
+import { formatPrice } from "@/src/lib/types";
 
 interface PaymentClaimCardProps {
-  orderId: string;
-  txId: string;
-  amount: number;
-  date: Date;
-  status: "available" | "claimed";
-  onClaim?: () => void;
-  onViewTransaction?: () => void;
+  orderId: bigint;
+  amount: bigint;
+  isClaimable: boolean;
+  onClaimSuccess?: () => void;
+  onOpenModal: () => void;
 }
 
 export function PaymentClaimCard({
   orderId,
-  txId,
   amount,
-  date,
-  status,
-  onClaim,
-  onViewTransaction,
+  isClaimable,
+  onClaimSuccess,
+  onOpenModal,
 }: PaymentClaimCardProps) {
-  const getStatusBadge = () => {
-    switch (status) {
-      case "available":
-        return (
-          <div className="px-2 py-1 bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 rounded-full text-xs flex items-center gap-1">
-            <ArrowDownLeft className="h-3 w-3" /> Available
-          </div>
-        );
-      case "claimed":
-        return (
-          <div className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 rounded-full text-xs flex items-center gap-1">
-            <CheckCircle className="h-3 w-3" /> Claimed
-          </div>
-        );
-      default:
-        return null;
+  const [isPending, setIsPending] = useState(false);
+  const { claimEscrow, isLoading } = useEscrow();
+
+  const handleClaim = async () => {
+    setIsPending(true);
+    try {
+      await claimEscrow(orderId);
+      if (onClaimSuccess) {
+        onClaimSuccess();
+      }
+    } finally {
+      setIsPending(false);
     }
   };
 
   return (
-    <Card
-      className={`border ${
-        status === "available"
-          ? "border-green-200 dark:border-green-900"
-          : "border-blue-200 dark:border-blue-900"
-      }`}
-    >
-      <CardContent className="p-4">
-        <div className="flex flex-col sm:flex-row justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium">Order #{orderId}</h3>
-              {getStatusBadge()}
-            </div>
-            <p className="text-sm text-muted-foreground mt-1">
-              Transaction ID:{" "}
-              <span className="font-mono text-xs">
-                {txId.substring(0, 16)}...
-              </span>
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              {date.toLocaleDateString()} at {date.toLocaleTimeString()}
-            </p>
-          </div>
-          <div className="flex flex-col sm:items-end gap-2">
-            <div className="text-xl font-bold text-green-600 dark:text-green-400">
-              ${amount.toFixed(2)}
-            </div>
-            <div className="flex gap-2">
-              {status === "available" && onClaim && (
-                <Button
-                  size="sm"
-                  className="gap-2 bg-green-600 hover:bg-green-700"
-                  onClick={onClaim}
-                >
-                  <ArrowDownLeft className="h-4 w-4" />
-                  Claim Payment
-                </Button>
-              )}
-              {status === "claimed" && onViewTransaction && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="gap-2"
-                  onClick={onViewTransaction}
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  View Transaction
-                </Button>
-              )}
-            </div>
-          </div>
+    <Card className="w-full">
+      <CardHeader>
+        <CardTitle className="text-lg">Payment #{orderId.toString()}</CardTitle>
+        <CardDescription>Order payment ready for claim</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex justify-between items-center mb-4">
+          <span className="text-sm font-medium">Amount:</span>
+          <span className="text-lg font-bold">${formatPrice(amount)} ETH</span>
+        </div>
+        <div className="flex justify-between items-center">
+          <span className="text-sm font-medium">Status:</span>
+          <span
+            className={`text-sm font-medium ${
+              isClaimable ? "text-green-500" : "text-yellow-500"
+            }`}
+          >
+            {isClaimable ? "Ready to claim" : "Pending completion"}
+          </span>
         </div>
       </CardContent>
+      <CardFooter className="flex justify-between">
+        <Button variant="outline" onClick={onOpenModal}>
+          View Details
+        </Button>
+        <Button
+          onClick={handleClaim}
+          disabled={!isClaimable || isLoading || isPending}
+        >
+          {isPending ? "Claiming..." : "Claim Payment"}
+        </Button>
+      </CardFooter>
     </Card>
   );
 }

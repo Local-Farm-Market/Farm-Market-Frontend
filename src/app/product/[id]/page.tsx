@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Button } from "@/src/components/ui/button";
@@ -12,7 +12,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/src/components/ui/tabs";
-import { MapPin, Calendar, User, ShoppingCart, ArrowLeft } from "lucide-react";
+import { MapPin, User, ShoppingCart, ArrowLeft, Calendar } from "lucide-react";
 import { QrVerification } from "@/src/components/product/qr-verification";
 import { TransactionTracker } from "@/src/components/escrow/transaction-tracker";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
@@ -20,246 +20,71 @@ import { useUserRole } from "@/src/hooks/use-user-role";
 import { AddToCartButton } from "@/src/components/product/add-to-cart-button";
 import { ProductReviews } from "@/src/components/product/product-reviews";
 import { StarRatingDisplay } from "@/src/components/product/star-rating-display";
+import { DashboardHeader } from "@/src/components/layout/dashboard-header";
+import { useProducts } from "@/src/hooks/use-products";
+import {
+  FARM_ESCROW_ABI,
+  FARM_ESCROW_ADDRESS,
+} from "@/src/lib/contract-config";
+import type { FormattedProduct } from "@/src/lib/types";
 
-// Mock product data
-const mockProducts = [
-  {
-    id: "1",
-    title: "Fresh Organic Tomatoes",
-    price: 3.99,
-    description:
-      "Delicious, vine-ripened organic tomatoes grown without pesticides or chemical fertilizers. These tomatoes are harvested at peak ripeness to ensure the best flavor and nutritional value.",
-    images: [
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-    ],
-    location: "Green Valley Farm, California",
-    farmer: {
-      id: "farmer123",
-      name: "John Smith",
-      rating: 4.8,
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    available: true,
-    quantity: 20,
-    unit: "lb",
-    category: "Vegetables",
-    harvestDate: "2023-05-15",
-    organic: true,
-    nutritionFacts: {
-      calories: 22,
-      protein: "1.1g",
-      carbs: "4.8g",
-      fat: "0.2g",
-      fiber: "1.5g",
-    },
-  },
-  {
-    id: "2",
-    title: "Grass-Fed Beef",
-    price: 12.99,
-    description:
-      "Premium grass-fed beef raised on open pastures without hormones or antibiotics. Our cattle are raised with ethical farming practices, resulting in leaner, more flavorful meat that's better for you and the environment.",
-    images: [
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-    ],
-    location: "Sunset Ranch, Texas",
-    farmer: {
-      id: "farmer456",
-      name: "Robert Johnson",
-      rating: 4.9,
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    available: true,
-    quantity: 15,
-    unit: "lb",
-    category: "Meat",
-    harvestDate: "2023-05-10",
-    organic: false,
-    nutritionFacts: {
-      calories: 250,
-      protein: "26g",
-      carbs: "0g",
-      fat: "17g",
-      fiber: "0g",
-    },
-  },
-  {
-    id: "3",
-    title: "Organic Free-Range Eggs",
-    price: 5.49,
-    description:
-      "Farm-fresh organic eggs from free-range chickens. Our hens roam freely on pasture, eating a natural diet supplemented with organic feed, resulting in eggs with rich, golden yolks and superior flavor.",
-    images: [
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-    ],
-    location: "Happy Hen Farm, Oregon",
-    farmer: {
-      id: "farmer789",
-      name: "Sarah Williams",
-      rating: 4.7,
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    available: true,
-    quantity: 30,
-    unit: "dozen",
-    category: "Poultry",
-    harvestDate: "2023-05-18",
-    organic: true,
-    nutritionFacts: {
-      calories: 70,
-      protein: "6g",
-      carbs: "0g",
-      fat: "5g",
-      fiber: "0g",
-    },
-  },
-  {
-    id: "4",
-    title: "Fresh Strawberries",
-    price: 4.99,
-    description:
-      "Sweet, juicy strawberries picked at the peak of ripeness. Our berries are grown using sustainable farming practices and are perfect for snacking, baking, or making preserves.",
-    images: [
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-    ],
-    location: "Berry Fields, Washington",
-    farmer: {
-      id: "farmer101",
-      name: "Emily Davis",
-      rating: 4.6,
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    available: false,
-    quantity: 0,
-    unit: "lb",
-    category: "Fruits",
-    harvestDate: "2023-05-12",
-    organic: true,
-    nutritionFacts: {
-      calories: 32,
-      protein: "0.7g",
-      carbs: "7.7g",
-      fat: "0.3g",
-      fiber: "2g",
-    },
-  },
-  {
-    id: "5",
-    title: "Artisanal Goat Cheese",
-    price: 8.99,
-    description:
-      "Creamy, tangy goat cheese made in small batches from the milk of our own pasture-raised goats. Our traditional cheese-making process creates a product with exceptional flavor and texture.",
-    images: [
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-    ],
-    location: "Mountain Dairy, Vermont",
-    farmer: {
-      id: "farmer202",
-      name: "Michael Brown",
-      rating: 4.9,
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    available: true,
-    quantity: 12,
-    unit: "oz",
-    category: "Dairy",
-    harvestDate: "2023-05-08",
-    organic: true,
-    nutritionFacts: {
-      calories: 120,
-      protein: "6g",
-      carbs: "0g",
-      fat: "10g",
-      fiber: "0g",
-    },
-  },
-  {
-    id: "6",
-    title: "Organic Quinoa",
-    price: 6.99,
-    description:
-      "Nutrient-rich organic quinoa grown using sustainable farming practices. This versatile ancient grain is a complete protein source and makes a perfect base for salads, bowls, and side dishes.",
-    images: [
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-      "/placeholder.svg?height=600&width=600",
-    ],
-    location: "Golden Fields, Idaho",
-    farmer: {
-      id: "farmer303",
-      name: "David Wilson",
-      rating: 4.7,
-      avatar: "/placeholder.svg?height=100&width=100",
-    },
-    available: true,
-    quantity: 25,
-    unit: "lb",
-    category: "Grains",
-    harvestDate: "2023-04-20",
-    organic: true,
-    nutritionFacts: {
-      calories: 120,
-      protein: "4g",
-      carbs: "21g",
-      fat: "1.9g",
-      fiber: "2.8g",
-    },
-  },
-];
-
-// Create a wrapper component to handle the async params
-export default function ProductPageWrapper({
-  params,
-}: {
-  params: Promise<{ id: string }> | { id: string };
-}) {
-  // Use React.use to unwrap the Promise if params is a Promise
-  const resolvedParams = params instanceof Promise ? use(params) : params;
-
-  return <ProductPage id={resolvedParams.id} />;
-}
-
-// The main product page component now takes id directly
-function ProductPage({ id }: { id: string }) {
+export default function ProductPage({ params }: { params: { id: string } }) {
   const router = useRouter();
   const { role } = useUserRole();
+  const { fetchProductById } = useProducts();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [totalPrice, setTotalPrice] = useState(0);
-  const [product, setProduct] = useState<any>(null);
+  const [product, setProduct] = useState<FormattedProduct | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sellerProfile, setSellerProfile] = useState<any>(null);
 
   useEffect(() => {
-    // Simulate API fetch
-    const fetchProduct = () => {
+    const fetchProduct = async () => {
       setLoading(true);
-      // Find product by ID from our mock data
-      const foundProduct = mockProducts.find((p) => p.id === id);
+      try {
+        // Fetch product data from contract
+        const productData = await fetchProductById(params.id);
 
-      if (foundProduct) {
-        setProduct(foundProduct);
-        setTotalPrice(foundProduct.price * quantity);
-      } else {
-        // Product not found, redirect to marketplace
+        if (!productData) {
+          router.push("/marketplace");
+          return;
+        }
+
+        setProduct(productData);
+        setTotalPrice(productData.price * quantity);
+
+        // Fetch seller profile using the API route
+        const response = await fetch("/api/read-contract", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            address: FARM_ESCROW_ADDRESS,
+            abi: FARM_ESCROW_ABI,
+            functionName: "userProfiles",
+            args: [productData.seller],
+          }),
+        });
+
+        const { result: sellerData } = await response.json();
+
+        if (sellerData) {
+          setSellerProfile(sellerData);
+          productData.location = `${sellerData.farmName}, ${sellerData.location}`;
+          productData.sellerName = sellerData.name;
+          setProduct({ ...productData });
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error);
         router.push("/marketplace");
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
     fetchProduct();
-  }, [id, router, quantity]);
+  }, [params.id, router, fetchProductById]);
 
   // Update total price when quantity changes
   useEffect(() => {
@@ -287,6 +112,8 @@ function ProductPage({ id }: { id: string }) {
   return (
     <ProtectedRoute requireAuth={true}>
       <div className="py-6 max-w-4xl mx-auto">
+        <DashboardHeader title={product.name} />
+
         <Button variant="ghost" onClick={() => router.back()} className="mb-6">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
@@ -297,20 +124,20 @@ function ProductPage({ id }: { id: string }) {
           <div>
             <div className="relative aspect-square overflow-hidden rounded-lg mb-4">
               <Image
-                src={product.images[selectedImage] || "/placeholder.svg"}
-                alt={product.title}
+                src={product.imageUrls[selectedImage] || "/placeholder.svg"}
+                alt={product.name}
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
               />
-              {product.organic && (
+              {product.isOrganic && (
                 <Badge className="absolute top-3 left-3 bg-green-500 hover:bg-green-600">
                   Organic
                 </Badge>
               )}
             </div>
             <div className="flex gap-2 overflow-x-auto pb-2">
-              {product.images.map((image: string, index: number) => (
+              {product.imageUrls.map((image: string, index: number) => (
                 <div
                   key={index}
                   className={`relative w-20 h-20 rounded-md overflow-hidden cursor-pointer border-2 ${
@@ -322,7 +149,7 @@ function ProductPage({ id }: { id: string }) {
                 >
                   <Image
                     src={image || "/placeholder.svg"}
-                    alt={`${product.title} - Image ${index + 1}`}
+                    alt={`${product.name} - Image ${index + 1}`}
                     fill
                     className="object-cover"
                   />
@@ -333,10 +160,12 @@ function ProductPage({ id }: { id: string }) {
 
           {/* Product Details */}
           <div>
-            <h1 className="text-3xl font-bold">{product.title}</h1>
+            <h1 className="text-3xl font-bold">{product.name}</h1>
             <div className="flex items-center gap-2 mt-2">
               <MapPin className="h-4 w-4 text-muted-foreground" />
-              <span className="text-muted-foreground">{product.location}</span>
+              <span className="text-muted-foreground">
+                {product.location || "Unknown location"}
+              </span>
             </div>
 
             <div className="mt-4 flex items-center gap-4 flex-wrap">
@@ -348,14 +177,20 @@ function ProductPage({ id }: { id: string }) {
                 {product.unit})
               </p>
               <Badge
-                variant={product.available ? "default" : "secondary"}
+                variant={
+                  product.isAvailable && product.stockQuantity > 0
+                    ? "default"
+                    : "secondary"
+                }
                 className={
-                  product.available
+                  product.isAvailable && product.stockQuantity > 0
                     ? "bg-green-500 hover:bg-green-600 text-white"
                     : "bg-gray-500 hover:bg-gray-600 text-white"
                 }
               >
-                {product.available ? "In Stock" : "Out of Stock"}
+                {product.isAvailable && product.stockQuantity > 0
+                  ? "In Stock"
+                  : "Out of Stock"}
               </Badge>
             </div>
 
@@ -364,21 +199,20 @@ function ProductPage({ id }: { id: string }) {
             <div className="flex flex-wrap items-center gap-4 mt-6">
               <div className="flex items-center gap-2">
                 <User className="h-4 w-4 text-muted-foreground" />
-                <span>Farmer: {product.farmer.name}</span>
+                <span>Farmer: {sellerProfile?.name || "Unknown"}</span>
               </div>
-              <div className="flex items-center gap-2">
-                <StarRatingDisplay
-                  rating={product.farmer.rating}
-                  size="sm"
-                  showValue={true}
-                />
-              </div>
+              {sellerProfile && (
+                <div className="flex items-center gap-2">
+                  <StarRatingDisplay
+                    rating={Number(sellerProfile.rating) / 10}
+                    size="sm"
+                    showValue={true}
+                  />
+                </div>
+              )}
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
-                <span>
-                  Harvested:{" "}
-                  {new Date(product.harvestDate).toLocaleDateString()}
-                </span>
+                <span>Harvested: {new Date().toLocaleDateString()}</span>
               </div>
             </div>
 
@@ -397,13 +231,15 @@ function ProductPage({ id }: { id: string }) {
                   variant="outline"
                   size="icon"
                   onClick={() => setQuantity(quantity + 1)}
-                  disabled={quantity >= product.quantity}
+                  disabled={quantity >= product.stockQuantity}
                 >
                   +
                 </Button>
               </div>
 
-              {role === "buyer" && product.available ? (
+              {role === "buyer" &&
+              product.isAvailable &&
+              product.stockQuantity > 0 ? (
                 <>
                   <Button
                     className="flex-1 gap-2"
@@ -415,14 +251,7 @@ function ProductPage({ id }: { id: string }) {
                   </Button>
 
                   <AddToCartButton
-                    product={{
-                      id: product.id,
-                      title: product.title,
-                      price: product.price,
-                      image: product.images[0],
-                      sellerId: product.farmer.id,
-                      sellerName: product.farmer.name,
-                    }}
+                    product={product}
                     className="bg-green-600 hover:bg-green-700 text-white"
                     variant="outline"
                   />
@@ -432,7 +261,10 @@ function ProductPage({ id }: { id: string }) {
                   className="flex-1 gap-2"
                   onClick={handleBuy}
                   disabled={
-                    !product.available || orderPlaced || role !== "buyer"
+                    !product.isAvailable ||
+                    product.stockQuantity <= 0 ||
+                    orderPlaced ||
+                    role !== "buyer"
                   }
                 >
                   <ShoppingCart className="h-4 w-4" />
@@ -448,9 +280,9 @@ function ProductPage({ id }: { id: string }) {
             <div className="mt-6">
               <QrVerification
                 productId={product.id}
-                farmerId={product.farmer.id}
-                productName={product.title}
-                harvestDate={product.harvestDate}
+                farmerId={product.seller}
+                productName={product.name}
+                harvestDate={new Date().toISOString()}
               />
             </div>
           </div>
@@ -462,7 +294,6 @@ function ProductPage({ id }: { id: string }) {
             <TabsList className="grid grid-cols-4 mb-6">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
-              <TabsTrigger value="nutrition">Nutrition</TabsTrigger>
               <TabsTrigger value="farmer">Farmer</TabsTrigger>
               {orderPlaced && (
                 <TabsTrigger value="order">Order Status</TabsTrigger>
@@ -486,22 +317,20 @@ function ProductPage({ id }: { id: string }) {
                           <span className="text-muted-foreground">
                             Organic:
                           </span>
-                          <span>{product.organic ? "Yes" : "No"}</span>
-                        </li>
-                        <li className="flex justify-between">
-                          <span className="text-muted-foreground">
-                            Harvest Date:
-                          </span>
-                          <span>
-                            {new Date(product.harvestDate).toLocaleDateString()}
-                          </span>
+                          <span>{product.isOrganic ? "Yes" : "No"}</span>
                         </li>
                         <li className="flex justify-between">
                           <span className="text-muted-foreground">
                             Available Quantity:
                           </span>
                           <span>
-                            {product.quantity} {product.unit}
+                            {product.stockQuantity} {product.unit}
+                          </span>
+                        </li>
+                        <li className="flex justify-between">
+                          <span className="text-muted-foreground">Sold:</span>
+                          <span>
+                            {product.soldCount} {product.unit}
                           </span>
                         </li>
                       </ul>
@@ -522,57 +351,51 @@ function ProductPage({ id }: { id: string }) {
               <ProductReviews productId={product.id} />
             </TabsContent>
 
-            <TabsContent value="nutrition" className="space-y-4">
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-medium mb-4">
-                    Nutrition Facts (per 100g)
-                  </h3>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    {Object.entries(product.nutritionFacts).map(
-                      ([key, value]) => (
-                        <div
-                          key={key}
-                          className="text-center p-4 bg-muted rounded-lg"
-                        >
-                          <p className="text-lg font-bold">{String(value)}</p>
-                          <p className="text-sm text-muted-foreground capitalize">
-                            {key}
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
             <TabsContent value="farmer" className="space-y-4">
               <Card>
                 <CardContent className="p-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="relative w-16 h-16 rounded-full overflow-hidden">
-                      <Image
-                        src={product.farmer.avatar || "/placeholder.svg"}
-                        alt={product.farmer.name}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{product.farmer.name}</h3>
-                      <div className="flex items-center gap-1 mt-1">
-                        <span>⭐</span>
-                        <span>{product.farmer.rating} Rating</span>
+                  {sellerProfile ? (
+                    <>
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className="relative w-16 h-16 rounded-full overflow-hidden">
+                          <Image
+                            src="/placeholder.svg"
+                            alt={sellerProfile.name}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                        <div>
+                          <h3 className="font-medium">{sellerProfile.name}</h3>
+                          <div className="flex items-center gap-1 mt-1">
+                            <span>⭐</span>
+                            <span>
+                              {Number(sellerProfile.rating) / 10} Rating
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                  <p className="mb-6">
-                    {product.farmer.name} has been farming organically for over
-                    15 years. Their farm is certified organic and uses
-                    sustainable farming practices to grow the highest quality
-                    produce.
-                  </p>
+                      <p className="mb-6">{sellerProfile.bio}</p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
+                          <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">
+                            Farm Details
+                          </h4>
+                          <p className="text-sm">
+                            {sellerProfile.farmDescription}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                          <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
+                            Location
+                          </h4>
+                          <p className="text-sm">{sellerProfile.location}</p>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <p>Farmer information not available</p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>

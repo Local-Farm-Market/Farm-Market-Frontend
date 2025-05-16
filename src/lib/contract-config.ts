@@ -1,7 +1,7 @@
 // Contract address - replace with your deployed contract address
-export const FARM_ESCROW_ADDRESS=0x123456789abcdef123456789abcdef123456789;
+export const FARM_ESCROW_ADDRESS = "0x1a932a833416b1ce95dd3623c2766df6f096d033";
 
-// Contract ABI
+// Contract ABI - using your original ABI
 export const FARM_ESCROW_ABI = [
   // ABI from your contract
   {
@@ -314,5 +314,5 @@ export function getFarmEscrowContract() {
   return {
     address: FARM_ESCROW_ADDRESS,
     abi: FARM_ESCROW_ABI,
-  };
+  } as const;
 }

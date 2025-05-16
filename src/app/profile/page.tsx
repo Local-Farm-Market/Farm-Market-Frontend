@@ -28,11 +28,9 @@ import {
 } from "@/src/components/ui/avatar";
 import { Badge } from "@/src/components/ui/badge";
 import { useUserRole } from "@/src/hooks/use-user-role";
-import { WalletConnect } from "@/src/components/auth/wallet-connect";
-import { NotificationPanel } from "@/src/components/notifications/notification-panel";
-import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 import { ReviewsModal } from "@/src/components/seller/reviews-modal";
+import { DashboardHeader } from "@/src/components/layout/dashboard-header";
 import {
   User,
   Settings,
@@ -86,6 +84,7 @@ const mockBuyerUser = {
     ],
   },
   walletAddress: "lsk7h3kquly4s5cgh8bj2j9yqtbdgz4venhmgkx4",
+  preferredCategories: [], // Add this property to match the buyer structure // Add this property to match the buyer structure
 };
 
 // Mock seller user data
@@ -99,6 +98,7 @@ const mockSellerUser = {
   rating: 4.8,
   reviewCount: 24,
   isSeller: true,
+  organicCertified: true, // Added property
   farmDetails: {
     name: "Green Valley Farm",
     description:
@@ -110,7 +110,6 @@ const mockSellerUser = {
     ],
     farmSize: "25 acres",
   },
-  organicCertified: true,
   products: [
     {
       id: "1",
@@ -149,7 +148,7 @@ export default function ProfilePage() {
 
     // Filter out empty values
     const cleanedProfileData = Object.entries(profileData || {}).reduce(
-      (acc: Record<string, any>, [key, value]) => {
+      (acc: { [key: string]: any }, [key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
           acc[key] = value;
         }
@@ -166,7 +165,17 @@ export default function ProfilePage() {
   });
 
   const [isEditing, setIsEditing] = useState(false);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    email: string;
+    bio: string;
+    location: string;
+    farmName: string;
+    farmDescription: string;
+    farmSize: string;
+    organicCertified: boolean;
+    preferredCategories: string[];
+  }>({
     name: user.name || "",
     email: user.email || "",
     bio: user.bio || "",
@@ -177,16 +186,16 @@ export default function ProfilePage() {
         ? user.farmDetails.name
         : "",
     farmDescription:
-      (role === "seller" && "farmDetails" in user && user.farmDetails
-        ? user.farmDetails.description
-        : "") ||
+      (role === "seller" &&
+        "farmDetails" in user &&
+        user.farmDetails?.description) ||
       (role === "seller" && "farmDetails" in user && user.farmDetails
         ? user.farmDetails.description
         : ""),
     farmSize:
-      (role === "seller" && "farmDetails" in user && user.farmDetails
-        ? user.farmDetails.farmSize
-        : "") ||
+      (role === "seller" &&
+        "farmDetails" in user &&
+        user.farmDetails?.farmSize) ||
       (role === "seller" && "farmDetails" in user && user.farmDetails
         ? user.farmDetails.farmSize
         : ""),
@@ -196,9 +205,10 @@ export default function ProfilePage() {
         : false,
     // For buyers
     preferredCategories:
-      role === "buyer" && "favoriteCategories" in user
-        ? user.favoriteCategories || []
-        : [],
+      (role === "seller" &&
+        "preferredCategories" in user &&
+        user.preferredCategories) ||
+      [],
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -227,43 +237,46 @@ export default function ProfilePage() {
       {} as Record<string, any>
     );
 
-    // Create updated user object with type safety
+    // Create updated user object
     const updatedUser = {
       ...user,
       ...cleanedFormData,
-      // Ensure farmDetails is properly typed for sellers
-      ...(role === "seller"
-        ? {
-            farmDetails: {
+      // Ensure farmDetails is always defined for sellers
+      farmDetails:
+        role === "seller"
+          ? {
               name:
                 cleanedFormData.farmName ||
-                ("farmDetails" in user ? user.farmDetails?.name : "") ||
+                (role === "seller" && "farmDetails" in user
+                  ? user.farmDetails?.name
+                  : "") ||
                 "",
               description:
                 cleanedFormData.farmDescription ||
-                ("farmDetails" in user ? user.farmDetails?.description : "") ||
+                ("farmDetails" in user && user.farmDetails?.description) ||
                 "",
-              certifications:
-                ("farmDetails" in user
-                  ? user.farmDetails?.certifications
-                  : []) || [],
               farmSize:
                 cleanedFormData.farmSize ||
-                ("farmDetails" in user ? user.farmDetails?.farmSize : "") ||
+                (role === "seller" && "farmDetails" in user
+                  ? user.farmDetails?.farmSize
+                  : "") ||
                 "",
+              certifications:
+                ("farmDetails" in user && user.farmDetails?.certifications) ||
+                [],
+            }
+          : "farmDetails" in user
+          ? user.farmDetails
+          : {
+              name: "",
+              description: "",
+              farmSize: "",
+              certifications: [],
             },
-            rating: "rating" in user ? user.rating : 0,
-            reviewCount: "reviewCount" in user ? user.reviewCount : 0,
-            isSeller: true,
-            organicCertified:
-              "organicCertified" in user ? user.organicCertified : false,
-            products: "products" in user ? user.products : [],
-          }
-        : {}),
     };
 
-    // Update state with the properly typed object
-    setUser(updatedUser as typeof user);
+    // Update state
+    setUser(updatedUser);
 
     // Save to localStorage
     localStorage.setItem("userProfile", JSON.stringify(cleanedFormData));
@@ -301,7 +314,10 @@ export default function ProfilePage() {
             <div className="flex flex-col items-center">
               <div className="relative mb-4">
                 <Avatar className="w-24 h-24">
-                  <AvatarImage src={user.avatar} alt={user.name} />
+                  <AvatarImage
+                    src={user.avatar || "/placeholder.svg"}
+                    alt={user.name}
+                  />
                   <AvatarFallback>
                     {user.name ? user.name.charAt(0) : "U"}
                   </AvatarFallback>
@@ -338,16 +354,17 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {"favoriteCategories" in user &&
-                user.favoriteCategories &&
-                user.favoriteCategories.length > 0 && (
+              {role === "seller" &&
+                "preferredCategories" in user &&
+                user.preferredCategories &&
+                user.preferredCategories.length > 0 && (
                   <div className="w-full mt-6">
                     <h3 className="text-sm font-medium mb-2 flex items-center">
                       <Heart className="h-4 w-4 mr-1 text-amber-600" />
                       Favorite Categories
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                      {user.favoriteCategories.map((category) => (
+                      {user.preferredCategories.map((category) => (
                         <Badge
                           key={category}
                           variant="outline"
@@ -620,7 +637,10 @@ export default function ProfilePage() {
               <div className="flex flex-col items-center">
                 <div className="relative mb-4">
                   <Avatar className="w-24 h-24">
-                    <AvatarImage src={user.avatar} alt={user.name} />
+                    <AvatarImage
+                      src={user.avatar || "/placeholder.svg"}
+                      alt={user.name}
+                    />
                     <AvatarFallback>
                       {user.name ? user.name.charAt(0) : "U"}
                     </AvatarFallback>
@@ -666,9 +686,10 @@ export default function ProfilePage() {
                 </div>
 
                 {((role === "seller" &&
-                  "organicCertified" in user &&
+                  "farmDetails" in user &&
                   user.organicCertified) ||
-                  ("farmDetails" in user &&
+                  (role === "seller" &&
+                    "farmDetails" in user &&
                     user.farmDetails &&
                     user.farmDetails.certifications &&
                     user.farmDetails.certifications.length > 0)) && (
@@ -678,9 +699,17 @@ export default function ProfilePage() {
                       Farm Certifications
                     </h3>
                     <div className="flex flex-wrap gap-2">
-                      {(user.organicCertified ? ["Certified Organic"] : [])
+                      {(role === "seller" &&
+                      "farmDetails" in user &&
+                      user.organicCertified
+                        ? ["Certified Organic"]
+                        : []
+                      )
                         .concat(
-                          user.farmDetails && user.farmDetails.certifications
+                          role === "seller" &&
+                            "farmDetails" in user &&
+                            user.farmDetails &&
+                            user.farmDetails.certifications
                             ? user.farmDetails.certifications.filter(
                                 (cert) => cert !== "Certified Organic"
                               )
@@ -740,11 +769,9 @@ export default function ProfilePage() {
               {!isEditing ? (
                 <div className="space-y-4">
                   <div>
-                    {role === "seller" &&
-                    "farmDetails" in user &&
-                    user.farmDetails.name ? (
+                    {"farmDetails" in user && user.farmDetails?.name ? (
                       <h3 className="font-medium text-lg text-amber-800 dark:text-amber-300">
-                        {user.farmDetails.name}
+                        {user.farmDetails?.name}
                       </h3>
                     ) : (
                       <h3 className="font-medium text-lg text-amber-800/50 dark:text-amber-300/50 italic">
@@ -766,11 +793,13 @@ export default function ProfilePage() {
                     )}
                   </div>
 
-                  {(("farmDetails" in user && user.farmDetails.description) ||
-                    ("farmDetails" in user && user.farmDetails.farmSize)) && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                      {"farmDetails" in user &&
-                        user.farmDetails?.description && (
+                  {role === "seller" &&
+                    "farmDetails" in user &&
+                    user.farmDetails &&
+                    (user.farmDetails.description ||
+                      user.farmDetails.farmSize) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                        {user.farmDetails?.description && (
                           <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-lg">
                             <h4 className="font-medium text-amber-800 dark:text-amber-300 mb-2">
                               Farm Details
@@ -780,18 +809,18 @@ export default function ProfilePage() {
                             </p>
                           </div>
                         )}
-                      {"farmDetails" in user && user.farmDetails?.farmSize && (
-                        <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
-                          <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
-                            Farm Size
-                          </h4>
-                          <p className="text-sm">
-                            {user.farmDetails?.farmSize}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                        {user.farmDetails?.farmSize && (
+                          <div className="p-4 bg-green-50 dark:bg-green-950/30 rounded-lg">
+                            <h4 className="font-medium text-green-800 dark:text-green-300 mb-2">
+                              Farm Size
+                            </h4>
+                            <p className="text-sm">
+                              {user.farmDetails?.farmSize}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -1043,17 +1072,9 @@ export default function ProfilePage() {
   return (
     <ProtectedRoute requireAuth={true}>
       <div className="py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-amber-800 dark:text-amber-400 flex items-center">
-            <Leaf className="h-6 w-6 mr-2 text-amber-600" />
-            {role === "seller" ? "Seller Profile" : "My Profile"}
-          </h1>
-          <div className="flex items-center gap-2">
-            <NotificationPanel />
-            <ThemeToggle />
-            <WalletConnect onRoleSelect={setRole} />
-          </div>
-        </div>
+        <DashboardHeader
+          title={role === "seller" ? "Seller Profile" : "My Profile"}
+        />
 
         <Tabs defaultValue="profile">
           <TabsList className="mb-6 bg-amber-100 dark:bg-amber-950/50">
