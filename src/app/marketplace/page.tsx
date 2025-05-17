@@ -1,6 +1,8 @@
+// app/marketplace/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { useDebounce } from "use-debounce";
 import { SearchBar } from "@/src/components/home/search-bar";
 import { ProductFilters } from "@/src/components/home/product-filters";
 import { ProductCard } from "@/src/components/product/product-card";
@@ -20,156 +22,114 @@ import {
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 import { DashboardHeader } from "@/src/components/layout/dashboard-header";
 import { useProducts } from "@/src/hooks/use-products";
+import { Pagination } from "@/src/components/ui/pagination";
+import { VirtualizedProductGrid } from "@/src/components/product/virtualized-product-grid";
 import type { FormattedProduct } from "@/src/lib/types";
 
 export default function MarketplacePage() {
-  const { fetchAllProducts, isLoading: productsLoading } = useProducts();
-  const [products, setProducts] = useState<FormattedProduct[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<FormattedProduct[]>(
-    []
-  );
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(12);
+
+  // Filter state
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery] = useDebounce(searchQuery, 300);
   const [activeFilter, setActiveFilter] = useState("All");
   const [priceRange, setPriceRange] = useState([0, 20]);
   const [maxDistance, setMaxDistance] = useState(20);
   const [organicOnly, setOrganicOnly] = useState(false);
   const [availableOnly, setAvailableOnly] = useState(false);
-  const [loading, setLoading] = useState(true);
 
-  // Fetch all products on component mount
-  useEffect(() => {
-    const loadProducts = async () => {
-      setLoading(true);
-      try {
-        const allProducts = await fetchAllProducts();
-        setProducts(allProducts);
-        setFilteredProducts(allProducts);
-      } catch (error) {
-        console.error("Error loading products:", error);
-      } finally {
-        setLoading(false);
+  // Get products with pagination
+  const { useProductsWithPagination } = useProducts();
+  const { products, total, isLoading } = useProductsWithPagination(
+    currentPage,
+    itemsPerPage,
+    activeFilter !== "All" ? activeFilter : undefined
+  );
+
+  // Memoized filtered products
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+
+    return products.filter((product) => {
+      // Search query filter
+      if (
+        debouncedSearchQuery &&
+        !product.name
+          .toLowerCase()
+          .includes(debouncedSearchQuery.toLowerCase()) &&
+        !(
+          product.location &&
+          product.location
+            .toLowerCase()
+            .includes(debouncedSearchQuery.toLowerCase())
+        )
+      ) {
+        return false;
       }
-    };
 
-    loadProducts();
-  }, [fetchAllProducts]);
+      // Price range filter
+      if (product.price < priceRange[0] || product.price > priceRange[1]) {
+        return false;
+      }
 
-  const handleSearch = (query: string) => {
+      // Organic filter
+      if (organicOnly && !product.isOrganic) {
+        return false;
+      }
+
+      // Availability filter
+      if (
+        availableOnly &&
+        (!product.isAvailable || product.stockQuantity <= 0)
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [products, debouncedSearchQuery, priceRange, organicOnly, availableOnly]);
+
+  // Handlers
+  const handleSearch = useCallback((query: string) => {
     setSearchQuery(query);
-    applyFilters(
-      query,
-      activeFilter,
-      priceRange,
-      maxDistance,
-      organicOnly,
-      availableOnly
-    );
-  };
+    setCurrentPage(1); // Reset to first page on new search
+  }, []);
 
-  const handleFilterChange = (filter: string) => {
+  const handleFilterChange = useCallback((filter: string) => {
     setActiveFilter(filter);
-    applyFilters(
-      searchQuery,
-      filter,
-      priceRange,
-      maxDistance,
-      organicOnly,
-      availableOnly
-    );
-  };
+    setCurrentPage(1); // Reset to first page on filter change
+  }, []);
 
-  const applyFilters = (
-    query: string,
-    category: string,
-    price: number[],
-    distance: number,
-    organic: boolean,
-    available: boolean
-  ) => {
-    let filtered = [...products];
-
-    // Apply search query filter
-    if (query) {
-      filtered = filtered.filter(
-        (product) =>
-          product.name.toLowerCase().includes(query.toLowerCase()) ||
-          (product.location &&
-            product.location.toLowerCase().includes(query.toLowerCase()))
-      );
-    }
-
-    // Apply category filter
-    if (category && category !== "All") {
-      filtered = filtered.filter((product) => product.category === category);
-    }
-
-    // Apply price range filter
-    filtered = filtered.filter(
-      (product) => product.price >= price[0] && product.price <= price[1]
-    );
-
-    // Apply organic filter
-    if (organic) {
-      filtered = filtered.filter((product) => product.isOrganic);
-    }
-
-    // Apply availability filter
-    if (available) {
-      filtered = filtered.filter(
-        (product) => product.isAvailable && Number(product.stockQuantity) > 0
-      );
-    }
-
-    setFilteredProducts(filtered);
-  };
-
-  const handlePriceChange = (value: number[]) => {
+  const handlePriceChange = useCallback((value: number[]) => {
     setPriceRange(value);
-    applyFilters(
-      searchQuery,
-      activeFilter,
-      value,
-      maxDistance,
-      organicOnly,
-      availableOnly
-    );
-  };
+  }, []);
 
-  const handleDistanceChange = (value: number[]) => {
+  const handleDistanceChange = useCallback((value: number[]) => {
     setMaxDistance(value[0]);
-    applyFilters(
-      searchQuery,
-      activeFilter,
-      priceRange,
-      value[0],
-      organicOnly,
-      availableOnly
-    );
-  };
+  }, []);
 
-  const handleOrganicChange = (checked: boolean) => {
+  const handleOrganicChange = useCallback((checked: boolean) => {
     setOrganicOnly(checked);
-    applyFilters(
-      searchQuery,
-      activeFilter,
-      priceRange,
-      maxDistance,
-      checked,
-      availableOnly
-    );
-  };
+  }, []);
 
-  const handleAvailableChange = (checked: boolean) => {
+  const handleAvailableChange = useCallback((checked: boolean) => {
     setAvailableOnly(checked);
-    applyFilters(
-      searchQuery,
-      activeFilter,
-      priceRange,
-      maxDistance,
-      organicOnly,
-      checked
-    );
-  };
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    setSearchQuery("");
+    setActiveFilter("All");
+    setPriceRange([0, 20]);
+    setMaxDistance(20);
+    setOrganicOnly(false);
+    setAvailableOnly(false);
+    setCurrentPage(1);
+  }, []);
+
+  // Calculate total pages
+  const totalPages = Math.ceil(total / itemsPerPage);
 
   return (
     <ProtectedRoute requireAuth={true} requireRole="buyer">
@@ -178,7 +138,7 @@ export default function MarketplacePage() {
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="flex-1">
-            <SearchBar onSearch={handleSearch} />
+            <SearchBar onSearch={handleSearch} initialValue={searchQuery} />
           </div>
           <Sheet>
             <SheetTrigger asChild>
@@ -257,56 +217,46 @@ export default function MarketplacePage() {
                   </div>
                 </div>
 
-                <Button
-                  className="w-full"
-                  onClick={() =>
-                    applyFilters(
-                      searchQuery,
-                      activeFilter,
-                      priceRange,
-                      maxDistance,
-                      organicOnly,
-                      availableOnly
-                    )
-                  }
-                >
-                  Apply Filters
+                <Button className="w-full" onClick={resetFilters}>
+                  Reset Filters
                 </Button>
               </div>
             </SheetContent>
           </Sheet>
         </div>
 
-        <ProductFilters onFilterChange={handleFilterChange} />
+        <ProductFilters
+          onFilterChange={handleFilterChange}
+          activeFilter={activeFilter}
+        />
 
-        {loading || productsLoading ? (
-          <div className="text-center py-12">
-            <p className="text-muted-foreground">Loading products...</p>
-          </div>
-        ) : filteredProducts.length > 0 ? (
+        {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={index}
+                className="h-80 rounded-lg bg-gray-100 animate-pulse"
+              ></div>
             ))}
           </div>
+        ) : filteredProducts.length > 0 ? (
+          <>
+            <VirtualizedProductGrid products={filteredProducts} />
+
+            <div className="mt-8 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
+            </div>
+          </>
         ) : (
           <div className="text-center py-12">
             <p className="text-muted-foreground">
               No products found matching your criteria.
             </p>
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={() => {
-                setSearchQuery("");
-                setActiveFilter("All");
-                setPriceRange([0, 20]);
-                setMaxDistance(20);
-                setOrganicOnly(false);
-                setAvailableOnly(false);
-                setFilteredProducts(products);
-              }}
-            >
+            <Button variant="outline" className="mt-4" onClick={resetFilters}>
               Reset Filters
             </Button>
           </div>

@@ -1,3 +1,4 @@
+// components/product/add-to-cart-button.tsx
 "use client";
 
 import { useState } from "react";
@@ -12,6 +13,7 @@ interface AddToCartButtonProps {
   variant?: "default" | "outline" | "secondary";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
+  quantity?: number; // Add this optional prop
 }
 
 export function AddToCartButton({
@@ -19,6 +21,7 @@ export function AddToCartButton({
   variant = "default",
   size = "default",
   className = "",
+  quantity = 1, // Default to 1 if not provided
 }: AddToCartButtonProps) {
   const { addItem } = useCart();
   const { role } = useUserRole();
@@ -30,7 +33,7 @@ export function AddToCartButton({
   }
 
   const handleAddToCart = async () => {
-    await addItem(product.id, 1);
+    await addItem(product.id, quantity); // Use the quantity prop
     setIsAdded(true);
 
     // Reset the button after 1.5 seconds

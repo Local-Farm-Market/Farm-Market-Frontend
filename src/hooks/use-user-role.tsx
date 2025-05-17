@@ -1,3 +1,4 @@
+// hooks/use-user-role.tsx
 "use client";
 
 import type React from "react";
@@ -15,6 +16,7 @@ interface UserRoleContextType {
   isConnected: boolean;
   walletAddress: string | undefined;
   checkAndRedirect: () => void;
+  isRedirecting: boolean; // Add this property
 }
 
 const UserRoleContext = createContext<UserRoleContextType | undefined>(
@@ -23,6 +25,7 @@ const UserRoleContext = createContext<UserRoleContextType | undefined>(
 
 export function UserRoleProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<UserRole>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false); // Add this state
   const router = useRouter();
   const pathname = usePathname();
   const { address, isConnected } = useAccount();
@@ -30,7 +33,7 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
 
   // Update role based on user profile
   useEffect(() => {
-    if (profile?.name && !isLoading) {
+    if (profile && !isLoading) {
       setRole(profile.isSeller ? "seller" : "buyer");
     } else if (!isConnected) {
       setRole(null);
@@ -46,7 +49,9 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
         !pathname.includes("/select-role") &&
         !pathname.includes("/profile-setup")
       ) {
+        setIsRedirecting(true); // Set redirecting state
         router.push("/");
+        setTimeout(() => setIsRedirecting(false), 500); // Reset after navigation
       }
       return;
     }
@@ -54,7 +59,9 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
     // If user doesn't have a profile, redirect to profile setup
     if (isConnected && !isLoading && !profile?.name) {
       if (pathname !== "/profile-setup" && pathname !== "/select-role") {
+        setIsRedirecting(true); // Set redirecting state
         router.push("/select-role");
+        setTimeout(() => setIsRedirecting(false), 500); // Reset after navigation
       }
       return;
     }
@@ -70,19 +77,25 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
         isSeller &&
         (pathname.includes("/cart") || pathname.includes("/checkout"))
       ) {
-        router.push("/seller-home");
+        setIsRedirecting(true); // Set redirecting state
+        router.push("/marketplace");
+        setTimeout(() => setIsRedirecting(false), 500); // Reset after navigation
         return;
       }
 
       // Redirect buyer to appropriate home page
       if (!isSeller && pathname === "/") {
+        setIsRedirecting(true); // Set redirecting state
         router.push("/buyer-home");
+        setTimeout(() => setIsRedirecting(false), 500); // Reset after navigation
         return;
       }
 
       // Redirect seller to appropriate home page
       if (isSeller && pathname === "/") {
+        setIsRedirecting(true); // Set redirecting state
         router.push("/seller-home");
+        setTimeout(() => setIsRedirecting(false), 500); // Reset after navigation
         return;
       }
     }
@@ -103,6 +116,7 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
         isConnected,
         walletAddress: address,
         checkAndRedirect,
+        isRedirecting, // Include in context value
       }}
     >
       {children}

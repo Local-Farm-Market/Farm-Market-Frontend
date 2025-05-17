@@ -23,7 +23,7 @@ import { ThemeToggle } from "@/src/components/layout/theme-toggle";
 import { ProtectedRoute } from "@/src/components/auth/protected-route";
 import { useUserRole } from "@/src/hooks/use-user-role";
 import { toast } from "@/src/components/ui/use-toast";
-import PayoutsTab from "@/src/app/wallet/payouts-tab";
+import { PayoutsTab } from "@/src/app/wallet/payouts-tab";
 import { useAccount, useBalance } from "wagmi";
 import { useSendTransaction, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther } from "viem";
@@ -476,9 +476,7 @@ export default function WalletPage() {
                           {transaction.type === "incoming" ? (
                             <ArrowDownLeft
                               className={`h-4 w-4 ${
-                                transaction.type === "incoming"
-                                  ? "text-green-600 dark:text-green-400"
-                                  : "text-amber-600 dark:text-amber-400"
+                                "text-green-600 dark:text-green-400"
                               }`}
                             />
                           ) : (

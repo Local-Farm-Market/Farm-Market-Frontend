@@ -1,6 +1,7 @@
+// components/home/product-filters.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Badge } from "@/src/components/ui/badge";
 import { ScrollArea, ScrollBar } from "@/src/components/ui/scroll-area";
 import { cn } from "@/src/lib/utils";
@@ -18,12 +19,25 @@ const categories = [
   { name: "Local", icon: Leaf },
 ];
 
+interface ProductFiltersProps {
+  onFilterChange: (filter: string) => void;
+  activeFilter?: string; // Add this optional prop
+}
+
 export function ProductFilters({
   onFilterChange,
-}: {
-  onFilterChange: (filter: string) => void;
-}) {
-  const [activeFilter, setActiveFilter] = useState("All");
+  activeFilter: externalActiveFilter,
+}: ProductFiltersProps) {
+  const [activeFilter, setActiveFilter] = useState(
+    externalActiveFilter || "All"
+  );
+
+  // Update activeFilter when externalActiveFilter changes
+  useEffect(() => {
+    if (externalActiveFilter !== undefined) {
+      setActiveFilter(externalActiveFilter);
+    }
+  }, [externalActiveFilter]);
 
   const handleFilterClick = (filter: string) => {
     setActiveFilter(filter);

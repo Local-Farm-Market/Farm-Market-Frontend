@@ -167,19 +167,28 @@ const BuyerDashboard = () => {
 
       <ProductFilters onFilterChange={handleFilterChange} />
 
-      {filteredProducts.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mt-6">
-          {filteredProducts.map((product) => (
-            <ProductCard key={product.id} {...product} />
-          ))}
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            No products found matching your criteria.
-          </p>
-        </div>
-      )}
+      {filteredProducts.map((product) => (
+        <ProductCard
+          key={product.id}
+          product={{
+            id: product.id,
+            name: product.title, // Assuming title maps to name
+            price: product.price,
+            imageUrls: [product.image], // Convert single image to array
+            location: product.location,
+            isAvailable: product.available,
+            category: product.category,
+            stockQuantity: 10, // Add default value
+            unit: "item", // Add default value
+            description: "", // Add default value
+            // Replace empty string with a valid Ethereum address format
+            seller:
+              "0x0000000000000000000000000000000000000000" as `0x${string}`,
+            isOrganic: false, // Add default value
+            soldCount: 0, // Add default value
+          }}
+        />
+      ))}
     </div>
   );
 };

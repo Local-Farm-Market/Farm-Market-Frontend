@@ -1,14 +1,27 @@
+// components/home/search-bar.tsx
 "use client";
 
 import type React from "react";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { Input } from "@/src/components/ui/input";
 import { Button } from "@/src/components/ui/button";
 
-export function SearchBar({ onSearch }: { onSearch: (query: string) => void }) {
-  const [query, setQuery] = useState("");
+interface SearchBarProps {
+  onSearch: (query: string) => void;
+  initialValue?: string; // Add this optional prop
+}
+
+export function SearchBar({ onSearch, initialValue = "" }: SearchBarProps) {
+  const [query, setQuery] = useState(initialValue);
+
+  // Update query when initialValue changes
+  useEffect(() => {
+    if (initialValue !== undefined) {
+      setQuery(initialValue);
+    }
+  }, [initialValue]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
