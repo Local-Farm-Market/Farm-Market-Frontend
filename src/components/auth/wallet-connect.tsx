@@ -128,10 +128,10 @@ export function WalletConnect({ onRoleSelect }: WalletConnectProps) {
         router.push("/profile-setup");
       }
       // If user has no role, redirect to role selection
-      else if (!savedRole) {
-        logState(`No role found, redirecting to role selection`);
-        router.push("/select-role");
-      }
+      // else if (!savedRole) {
+      //   logState(`No role found, redirecting to role selection`);
+      //   router.push("/select-role");
+      // }
     }
   }, [isConnected, address, router, setContextRole, onRoleSelect]);
 

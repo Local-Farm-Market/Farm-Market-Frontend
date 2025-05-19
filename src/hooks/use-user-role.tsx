@@ -60,7 +60,7 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
     if (isConnected && !isLoading && !profile?.name) {
       if (pathname !== "/profile-setup" && pathname !== "/select-role") {
         setIsRedirecting(true); // Set redirecting state
-        router.push("/select-role");
+        router.push("/profile-setup");
         setTimeout(() => setIsRedirecting(false), 500); // Reset after navigation
       }
       return;
@@ -78,7 +78,7 @@ export function UserRoleProvider({ children }: { children: React.ReactNode }) {
         (pathname.includes("/cart") || pathname.includes("/checkout"))
       ) {
         setIsRedirecting(true); // Set redirecting state
-        router.push("/marketplace");
+        router.push("/seller-home");
         setTimeout(() => setIsRedirecting(false), 500); // Reset after navigation
         return;
       }
